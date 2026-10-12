@@ -4,9 +4,12 @@ Run from the repository root:
 
     python3 tools/generate_data.py
 
-The script reads the companies and destinations from data/, creates offers
-whose prices, durations, transfers and fare conditions follow each company's
-profile, and writes them to data/offers.csv. A fixed seed makes the output
+The script reads the companies and destinations from data/. For every
+company and destination it fixes a route (transfers, normal price, normal
+driving time), runs that route on four to six days of the travel week and
+writes one offer per fare type for each departure. Prices, durations and
+fare conditions follow each company's profile. The result goes to
+data/offers.csv. A fixed seed makes the output
 identical on every run, so the dataset can be reproduced from the script.
 """
 
@@ -93,9 +96,28 @@ COMPANY_SETTINGS = {
 
 TRANSFER_MINUTES = 35
 
+# Each route runs on this many of the seven travel days.
+MIN_RUNNING_DAYS = 4
+MAX_RUNNING_DAYS = 6
+
+# Companies that sell two fare types on the same departure. Each entry is
+# (fare_type, price_factor, changeable, refundable). Companies not listed
+# sell one "standard" fare whose conditions come from COMPANY_SETTINGS.
+FARE_TYPES = {
+    "SOL": [
+        ("basic", 1.00, "none", "no"),
+        ("plus", 1.20, "fee", "no"),
+    ],
+    "CAM": [
+        ("standard", 1.00, "fee", "no"),
+        ("flex", 1.25, "free", "yes"),
+    ],
+}
+
 OFFER_COLUMNS = [
     "offer_id",
     "company_id",
+    "fare_type",
     "destination_id",
     "departure_date",
     "departure_time",
@@ -117,7 +139,13 @@ def read_csv(path):
         return list(csv.DictReader(file))
 
 
-def make_offer(rng, number, company_id, destination):
+def make_route(rng, company_id, destination):
+    """Fix the things that stay the same for one company on one route.
+
+    Transfers, the normal price and the normal driving time belong to the
+    route, so the same company does not look completely different from one
+    day to the next.
+    """
     settings = COMPANY_SETTINGS[company_id]
     distance = int(destination["distance_km"])
     coastal = destination["coastal"] == "yes"
@@ -137,15 +165,8 @@ def make_offer(rng, number, company_id, destination):
     # Duration: driving time plus time lost per transfer, varied by up to 10%.
     driving_minutes = distance / settings["speed_kmh"] * 60
     minutes = (driving_minutes + transfers * TRANSFER_MINUTES) * rng.uniform(0.9, 1.1)
-    minutes = 5 * round(minutes / 5)
-
-    day = rng.randrange(TRAVEL_DAYS)
-    hour = rng.choice(list(settings["departure_hours"]))
-    departure = FIRST_TRAVEL_DATE + timedelta(days=day, hours=hour, minutes=rng.choice([0, 15, 30, 45]))
-    arrival = departure + timedelta(minutes=minutes)
 
     rating = settings["rating"] + rng.uniform(-0.4, 0.4)
-    rating = min(5.0, max(1.0, rating))
 
     if settings["co2_g_per_km"] is None:
         co2 = ""
@@ -153,30 +174,72 @@ def make_offer(rng, number, company_id, destination):
         co2 = f"{distance * settings['co2_g_per_km'] / 1000:.1f}"
 
     return {
-        "offer_id": f"OFR-{number:05d}",
         "company_id": company_id,
         "destination_id": destination["destination_id"],
-        "departure_date": departure.strftime("%Y-%m-%d"),
-        "departure_time": departure.strftime("%H:%M"),
-        "arrival_date": arrival.strftime("%Y-%m-%d"),
-        "arrival_time": arrival.strftime("%H:%M"),
-        "price_eur": f"{price:.2f}",
         "transfers": transfers,
-        "luggage_kg": settings["luggage_kg"],
-        "changeable": rng.choice(settings["changeable"]),
-        "refundable": "yes" if rng.random() < settings["refundable_chance"] else "no",
-        "available_seats": rng.randint(0, 45),
-        "rating": f"{rating:.1f}",
-        "co2_kg": co2,
+        "price": price,
+        "minutes": minutes,
+        "rating": min(5.0, max(1.0, rating)),
+        "co2": co2,
     }
+
+
+def fares_for(rng, company_id):
+    """Return the fare types sold on one departure."""
+    if company_id in FARE_TYPES:
+        return FARE_TYPES[company_id]
+    settings = COMPANY_SETTINGS[company_id]
+    changeable = rng.choice(settings["changeable"])
+    refundable = "yes" if rng.random() < settings["refundable_chance"] else "no"
+    return [("standard", 1.00, changeable, refundable)]
+
+
+def make_departures(rng, route, first_number):
+    """Create every offer for one route across the travel week."""
+    settings = COMPANY_SETTINGS[route["company_id"]]
+    running_days = rng.randint(MIN_RUNNING_DAYS, MAX_RUNNING_DAYS)
+    days = sorted(rng.sample(range(TRAVEL_DAYS), running_days))
+
+    offers = []
+    for day in days:
+        hour = rng.choice(list(settings["departure_hours"]))
+        minute = rng.choice([0, 15, 30, 45])
+        departure = FIRST_TRAVEL_DATE + timedelta(days=day, hours=hour, minutes=minute)
+
+        # Small day-to-day changes in price and traffic.
+        day_price = route["price"] * rng.uniform(0.92, 1.08)
+        minutes = 5 * round(route["minutes"] * rng.uniform(0.95, 1.05) / 5)
+        arrival = departure + timedelta(minutes=minutes)
+
+        for fare_type, price_factor, changeable, refundable in fares_for(rng, route["company_id"]):
+            number = first_number + len(offers)
+            offers.append({
+                "offer_id": f"OFR-{number:05d}",
+                "company_id": route["company_id"],
+                "fare_type": fare_type,
+                "destination_id": route["destination_id"],
+                "departure_date": departure.strftime("%Y-%m-%d"),
+                "departure_time": departure.strftime("%H:%M"),
+                "arrival_date": arrival.strftime("%Y-%m-%d"),
+                "arrival_time": arrival.strftime("%H:%M"),
+                "price_eur": f"{day_price * price_factor:.2f}",
+                "transfers": route["transfers"],
+                "luggage_kg": settings["luggage_kg"],
+                "changeable": changeable,
+                "refundable": refundable,
+                "available_seats": rng.randint(0, 45),
+                "rating": f"{route['rating']:.1f}",
+                "co2_kg": route["co2"],
+            })
+    return offers
 
 
 def generate(rng, companies, destinations):
     offers = []
     for company in companies:
         for destination in destinations:
-            number = len(offers) + 1
-            offers.append(make_offer(rng, number, company["company_id"], destination))
+            route = make_route(rng, company["company_id"], destination)
+            offers.extend(make_departures(rng, route, len(offers) + 1))
     return offers
 
 
