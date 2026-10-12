@@ -1,0 +1,22 @@
+offer_id,company_id,fare_type,destination_id,departure_date,departure_time,arrival_date,arrival_time,price_eur,transfers,luggage_kg,changeable,refundable,available_seats,rating,co2_kg
+OFR-90001,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90002,VER,standard,MAL,2026-07-13,12:00,2026-07-13,19:35,45.02,0,20,free,yes,0,4.3,6.4
+OFR-90003,ver,standard, mal ,2026-07-13,14:00,2026-07-13,21:35,45.02,0,20,free,yes,12,4.3,6.4
+OFR-90004,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,-12.50,0,20,free,yes,36,4.3,6.4
+OFR-90005,VER,standard,XYZ,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90006,BUS,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90007,VER,standard,MAL,2026-02-30,10:00,2026-02-30,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90008,VER,standard,MAL,2026-07-13,25:10,2026-07-14,08:45,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90009,VER,standard,MAL,2026-07-13,17:35,2026-07-13,10:00,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90010,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,36,6.0,6.4
+OFR-12,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90012,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,,0,20,free,yes,36,4.3,6.4
+OFR-90013,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes
+OFR-90014,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,abc,0,20,free,yes,36,4.3,6.4
+OFR-90015,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,nan,0,20,free,yes,36,4.3,6.4
+OFR-90016,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,free,yes,-3,4.3,6.4
+OFR-90017,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,-1,20,free,yes,36,4.3,6.4
+OFR-90018,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,45.02,0,20,maybe,yes,36,4.3,6.4
+OFR-90001,VER,standard,MAL,2026-07-14,10:00,2026-07-14,17:35,45.02,0,20,free,yes,36,4.3,6.4
+OFR-90020,VER,standard,MAL,2026-07-13,10:00,2026-07-13,17:35,1.50,0,20,free,yes,36,4.3,6.4
+OFR-90021,VER,standard,BAR,2026-07-13,10:00,2026-07-13,12:00,52.00,0,20,free,yes,36,4.3,7.4
