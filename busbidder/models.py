@@ -79,3 +79,55 @@ class FareConditions:
 
     def __repr__(self):
         return f"FareConditions({self.fare_type!r}, {self.changeable!r}, {self.refundable})"
+
+
+class Offer:
+    """One bookable departure from one company.
+
+    An Offer is built from other objects (composition): it has a Company, a
+    Destination and a FareConditions. Departure and arrival are full
+    datetimes, so overnight journeys are handled correctly and duration is
+    always calculated, never stored.
+    """
+
+    price_eur = Bounded(minimum=0)
+    transfers = Bounded(minimum=0, whole_number=True)
+    luggage_kg = Bounded(minimum=0)
+    available_seats = Bounded(minimum=0, whole_number=True)
+    rating = Bounded(minimum=1, maximum=5)
+    co2_kg = Bounded(minimum=0, optional=True)
+
+    def __init__(self, offer_id, company, destination, fare, departure, arrival,
+                 price_eur, transfers, luggage_kg, available_seats, rating, co2_kg=None):
+        if arrival <= departure:
+            raise InvalidValueError(
+                "arrival", arrival.strftime("%Y-%m-%d %H:%M"), "must be after departure"
+            )
+        self.offer_id = offer_id
+        self.company = company
+        self.destination = destination
+        self.fare = fare
+        self.departure = departure
+        self.arrival = arrival
+        self.price_eur = price_eur
+        self.transfers = transfers
+        self.luggage_kg = luggage_kg
+        self.available_seats = available_seats
+        self.rating = rating
+        self.co2_kg = co2_kg
+
+    @property
+    def duration_minutes(self):
+        return int((self.arrival - self.departure).total_seconds() // 60)
+
+    @property
+    def travel_date(self):
+        """The date the journey starts, used for the traveller's date window."""
+        return self.departure.date()
+
+    def __repr__(self):
+        return (
+            f"Offer({self.offer_id!r}, {self.company.company_id}, "
+            f"{self.destination.destination_id}, {self.departure:%Y-%m-%d %H:%M}, "
+            f"EUR {self.price_eur:.2f})"
+        )

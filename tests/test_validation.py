@@ -9,10 +9,14 @@ class Sample:
 
     rating = Bounded(minimum=1, maximum=5)
     price = Bounded(minimum=0)
+    seats = Bounded(minimum=0, whole_number=True)
+    co2 = Bounded(minimum=0, optional=True)
 
-    def __init__(self, rating=3, price=10):
+    def __init__(self, rating=3, price=10, seats=5, co2=None):
         self.rating = rating
         self.price = price
+        self.seats = seats
+        self.co2 = co2
 
 
 class BoundedTests(unittest.TestCase):
@@ -67,6 +71,21 @@ class BoundedTests(unittest.TestCase):
         with self.assertRaises(InvalidValueError):
             sample.rating = 9
         self.assertEqual(sample.rating, 3)
+
+    def test_whole_number_rejects_floats(self):
+        self.assertEqual(Sample(seats=0).seats, 0)
+        with self.assertRaises(InvalidValueError):
+            Sample(seats=2.5)
+
+    def test_optional_accepts_none_but_still_checks_numbers(self):
+        self.assertIsNone(Sample(co2=None).co2)
+        self.assertEqual(Sample(co2=6.4).co2, 6.4)
+        with self.assertRaises(InvalidValueError):
+            Sample(co2=-1)
+
+    def test_none_is_rejected_when_not_optional(self):
+        with self.assertRaises(InvalidValueError):
+            Sample(price=None)
 
     def test_minimum_above_maximum_is_refused(self):
         with self.assertRaises(ValueError):

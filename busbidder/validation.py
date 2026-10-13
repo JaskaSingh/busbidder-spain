@@ -111,13 +111,18 @@ class Bounded:
     Both boundaries are inclusive. The value is stored on the instance under
     a private name (price is stored as _price), and every assignment is
     checked, including the one made in __init__.
+
+    whole_number=True rejects floats (for seats and transfers).
+    optional=True allows None for values a company may not report.
     """
 
-    def __init__(self, minimum=None, maximum=None):
+    def __init__(self, minimum=None, maximum=None, whole_number=False, optional=False):
         if minimum is not None and maximum is not None and minimum > maximum:
             raise ValueError("minimum cannot be greater than maximum")
         self.minimum = minimum
         self.maximum = maximum
+        self.whole_number = whole_number
+        self.optional = optional
 
     def __set_name__(self, owner, name):
         self.public_name = name
@@ -129,8 +134,13 @@ class Bounded:
         return getattr(instance, self.private_name)
 
     def __set__(self, instance, value):
+        if value is None and self.optional:
+            setattr(instance, self.private_name, None)
+            return
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise InvalidValueError(self.public_name, value, "must be a number")
+        if self.whole_number and not isinstance(value, int):
+            raise InvalidValueError(self.public_name, value, "must be a whole number")
         if not math.isfinite(value):
             raise InvalidValueError(self.public_name, value, "must be a finite number")
         if self.minimum is not None and value < self.minimum:
