@@ -1,8 +1,108 @@
-"""Validation rules shared across the application."""
+"""Validation rules shared across the application.
+
+The functions in this module turn raw text from the data files into Python
+values. Each one returns a clean value or raises InvalidValueError naming the
+field, the value and the reason. Range rules for numbers live in the Bounded
+descriptor, so the conversion functions only check that the text has the
+right form.
+"""
 
 import math
+import re
+from datetime import datetime
 
 from .errors import InvalidValueError
+
+OFFER_ID_PATTERN = re.compile(r"OFR-\d{5}")
+CODE_PATTERN = re.compile(r"[A-Z]{3}")
+
+DATE_FORMAT = "%Y-%m-%d"
+TIME_FORMAT = "%H:%M"
+
+
+def require_text(field, text):
+    """Return the text without surrounding spaces, or raise if it is empty."""
+    if text is None or text.strip() == "":
+        raise InvalidValueError(field, text, "is missing")
+    return text.strip()
+
+
+def validate_identifier(field, text, pattern):
+    """Return the text if the whole of it matches the pattern."""
+    value = require_text(field, text)
+    if not pattern.fullmatch(value):
+        raise InvalidValueError(field, value, f"does not match {pattern.pattern}")
+    return value
+
+
+def clean_code(field, text):
+    """Return a three-letter code in upper case.
+
+    Spaces and lower case are corrected because they cannot change the
+    meaning of a code. The caller compares the result with the original text
+    to decide whether to log a correction.
+    """
+    value = require_text(field, text).upper()
+    if not CODE_PATTERN.fullmatch(value):
+        raise InvalidValueError(field, text, "must be three letters")
+    return value
+
+
+def to_int(field, text):
+    value = require_text(field, text)
+    try:
+        return int(value)
+    except ValueError:
+        raise InvalidValueError(field, value, "is not a whole number") from None
+
+
+def to_float(field, text):
+    """Convert text to a float.
+
+    Python accepts "nan" and "inf" here. They are rejected later by the
+    Bounded descriptor, which owns all rules about allowed numbers.
+    """
+    value = require_text(field, text)
+    try:
+        return float(value)
+    except ValueError:
+        raise InvalidValueError(field, value, "is not a number") from None
+
+
+def to_optional_float(field, text):
+    """Like to_float, but an empty value means "not reported" and gives None."""
+    if text is None or text.strip() == "":
+        return None
+    return to_float(field, text)
+
+
+def parse_date(field, text):
+    value = require_text(field, text)
+    try:
+        return datetime.strptime(value, DATE_FORMAT).date()
+    except ValueError:
+        raise InvalidValueError(field, value, "is not a valid date (YYYY-MM-DD)") from None
+
+
+def parse_time(field, text):
+    value = require_text(field, text)
+    try:
+        return datetime.strptime(value, TIME_FORMAT).time()
+    except ValueError:
+        raise InvalidValueError(field, value, "is not a valid time (HH:MM)") from None
+
+
+def parse_choice(field, text, allowed):
+    """Return the text if it is one of the allowed words."""
+    value = require_text(field, text)
+    if value not in allowed:
+        options = ", ".join(sorted(allowed))
+        raise InvalidValueError(field, value, f"must be one of: {options}")
+    return value
+
+
+def parse_yes_no(field, text):
+    return parse_choice(field, text, {"yes", "no"}) == "yes"
 
 
 class Bounded:
