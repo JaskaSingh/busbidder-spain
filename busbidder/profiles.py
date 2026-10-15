@@ -9,6 +9,7 @@ hard rule for one traveller and only a preference for another.
 
 import json
 
+from .criteria import available_criteria
 from .errors import ConfigError, DataFileError, InvalidValueError
 from .validation import Bounded, clean_code, parse_date, parse_time, require_text
 
@@ -29,7 +30,13 @@ def validate_weights(weights):
     """
     if not isinstance(weights, dict) or not weights:
         raise InvalidValueError("weights", weights, "must be a non-empty mapping of criterion to percentage")
+    known = available_criteria()
     for name, weight in weights.items():
+        if name not in known:
+            raise InvalidValueError(
+                f"weights.{name}", weight,
+                f"is not a known criterion (available: {', '.join(known)})",
+            )
         if isinstance(weight, bool) or not isinstance(weight, int):
             raise InvalidValueError(f"weights.{name}", weight, "must be a whole percentage")
         if weight < 0:

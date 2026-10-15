@@ -47,6 +47,11 @@ class WeightTests(unittest.TestCase):
                 with self.assertRaises(InvalidValueError):
                     validate_weights({"price": bad, "duration": 60})
 
+    def test_unknown_criterion_name_is_rejected(self):
+        with self.assertRaises(InvalidValueError) as context:
+            validate_weights({"price": 50, "comfort": 50})
+        self.assertIn("not a known criterion", context.exception.reason)
+
     def test_empty_weights_are_rejected(self):
         with self.assertRaises(InvalidValueError):
             validate_weights({})

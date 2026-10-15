@@ -36,3 +36,12 @@ class ConfigError(BusBidderError):
         self.source = str(source)
         self.reason = reason
         super().__init__(f"{self.source}: {reason}")
+
+
+class RegistryError(BusBidderError):
+    """A name is missing from, or registered twice in, a registry."""
+
+    def __init__(self, name, reason):
+        self.name = name
+        self.reason = reason
+        super().__init__(f"{name!r} {reason}")
