@@ -27,3 +27,12 @@ class InvalidValueError(BusBidderError):
         self.value = value
         self.reason = reason
         super().__init__(f"{field} = {value!r}: {reason}")
+
+
+class ConfigError(BusBidderError):
+    """A traveller profile or other configuration is invalid."""
+
+    def __init__(self, source, reason):
+        self.source = str(source)
+        self.reason = reason
+        super().__init__(f"{self.source}: {reason}")
