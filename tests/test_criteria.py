@@ -48,7 +48,7 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(rating_score.__name__, "rating_score")
             self.assertEqual(get_criterion("test_rating")(make_offer(rating=5), None), 100)
         finally:
-            CRITERIA.pop("test_rating", None)
+            CRITERIA.remove("test_rating")
 
 
 class PriceTests(unittest.TestCase):

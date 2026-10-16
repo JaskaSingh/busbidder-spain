@@ -11,34 +11,20 @@ budget, the route's fastest plausible time), so an offer's score does not
 depend on which other offers are in the list.
 """
 
-from .errors import RegistryError
+from .registry import Registry
 
-CRITERIA = {}
+CRITERIA = Registry("criterion")
 
-
-def criterion(name):
-    """Decorator factory: register the decorated function under the given name."""
-
-    def register(function):
-        if name in CRITERIA:
-            raise RegistryError(name, "is already registered as a criterion")
-        function.criterion_name = name
-        CRITERIA[name] = function
-        return function
-
-    return register
+# @criterion("name") registers a scoring function under that name.
+criterion = CRITERIA.register
 
 
 def get_criterion(name):
-    try:
-        return CRITERIA[name]
-    except KeyError:
-        available = ", ".join(available_criteria())
-        raise RegistryError(name, f"is not a known criterion (available: {available})") from None
+    return CRITERIA.get(name)
 
 
 def available_criteria():
-    return sorted(CRITERIA)
+    return CRITERIA.names()
 
 
 def clamp(score):
