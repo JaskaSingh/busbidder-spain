@@ -1,7 +1,7 @@
 """Traveller profiles: hard constraints and preference weights.
 
 A profile is one traveller's request. Its hard constraints (destination,
-dates, budget, seats, transfers, changeability, maximum duration) decide
+dates, budget, seats, transfers, minimum change level, maximum duration) decide
 which offers are acceptable at all. Its weights decide how acceptable offers
 are ranked. Keeping both in the profile means the same attribute can be a
 hard rule for one traveller and only a preference for another.
@@ -11,11 +11,12 @@ import json
 
 from .criteria import available_criteria
 from .errors import ConfigError, DataFileError, InvalidValueError
-from .validation import Bounded, clean_code, parse_date, parse_time, require_text
+from .models import CHANGE_OPTIONS
+from .validation import Bounded, clean_code, parse_choice, parse_date, parse_time, require_text
 
 PROFILE_KEYS = {
     "label", "destination_id", "earliest_date", "latest_date", "max_price_eur",
-    "seats_needed", "max_transfers", "changeable_required", "max_duration_minutes",
+    "seats_needed", "max_transfers", "min_change_level", "max_duration_minutes",
     "preferred_departure_from", "preferred_departure_to", "weights",
 }
 WEIGHT_TOTAL = 100
@@ -55,13 +56,15 @@ class TravellerProfile:
     max_duration_minutes = Bounded(minimum=1, whole_number=True, optional=True)
 
     def __init__(self, name, label, destination_id, earliest_date, latest_date,
-                 max_price_eur, seats_needed, max_transfers, changeable_required,
+                 max_price_eur, seats_needed, max_transfers, min_change_level,
                  max_duration_minutes, preferred_departure_from,
                  preferred_departure_to, weights):
         if latest_date < earliest_date:
             raise InvalidValueError("latest_date", str(latest_date), "is before earliest_date")
-        if not isinstance(changeable_required, bool):
-            raise InvalidValueError("changeable_required", changeable_required, "must be true or false")
+        if min_change_level not in CHANGE_OPTIONS:
+            raise InvalidValueError(
+                "min_change_level", min_change_level, f"must be one of: {', '.join(CHANGE_OPTIONS)}"
+            )
         if preferred_departure_from == preferred_departure_to:
             raise InvalidValueError(
                 "preferred_departure_to", str(preferred_departure_to),
@@ -75,7 +78,7 @@ class TravellerProfile:
         self.max_price_eur = max_price_eur
         self.seats_needed = seats_needed
         self.max_transfers = max_transfers
-        self.changeable_required = changeable_required
+        self.min_change_level = min_change_level
         self.max_duration_minutes = max_duration_minutes
         self.preferred_departure_from = preferred_departure_from
         self.preferred_departure_to = preferred_departure_to
@@ -102,7 +105,7 @@ def _profile_from_dict(name, data):
         max_price_eur=data["max_price_eur"],
         seats_needed=data["seats_needed"],
         max_transfers=data["max_transfers"],
-        changeable_required=data["changeable_required"],
+        min_change_level=parse_choice("min_change_level", data["min_change_level"], set(CHANGE_OPTIONS)),
         max_duration_minutes=data["max_duration_minutes"],
         preferred_departure_from=parse_time("preferred_departure_from", data["preferred_departure_from"]),
         preferred_departure_to=parse_time("preferred_departure_to", data["preferred_departure_to"]),

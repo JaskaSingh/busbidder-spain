@@ -15,6 +15,8 @@ from abc import ABC, abstractmethod
 from collections import Counter
 from dataclasses import dataclass, field
 
+from .models import CHANGE_OPTIONS
+
 
 class Constraint(ABC):
     """Base class for all hard constraints."""
@@ -90,12 +92,21 @@ class TransfersConstraint(Constraint):
         return None
 
 
-class ChangeableConstraint(Constraint):
-    name = "changeable ticket"
+class ChangeLevelConstraint(Constraint):
+    """The ticket must allow at least a given level of change.
+
+    Levels are ordered none < fee < free. "fee" means any changeable ticket
+    is acceptable. "free" means changes must not cost extra.
+    """
+
+    name = "change level"
+
+    def __init__(self, min_level):
+        self.min_level = min_level
 
     def check(self, offer):
-        if offer.fare.changeable == "none":
-            return "ticket cannot be changed"
+        if CHANGE_OPTIONS.index(offer.fare.changeable) < CHANGE_OPTIONS.index(self.min_level):
+            return f"ticket allows '{offer.fare.changeable}' changes, '{self.min_level}' or better needed"
         return None
 
 
@@ -120,8 +131,8 @@ def constraints_for(profile):
         SeatsConstraint(profile.seats_needed),
         TransfersConstraint(profile.max_transfers),
     ]
-    if profile.changeable_required:
-        constraints.append(ChangeableConstraint())
+    if profile.min_change_level != "none":
+        constraints.append(ChangeLevelConstraint(profile.min_change_level))
     if profile.max_duration_minutes is not None:
         constraints.append(MaxDurationConstraint(profile.max_duration_minutes))
     return constraints

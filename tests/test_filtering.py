@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from busbidder.filtering import (
     BudgetConstraint,
-    ChangeableConstraint,
+    ChangeLevelConstraint,
     DateWindowConstraint,
     DestinationConstraint,
     MaxDurationConstraint,
@@ -27,7 +27,7 @@ def make_profile(**changes):
         "max_price_eur": 50,
         "seats_needed": 1,
         "max_transfers": 1,
-        "changeable_required": False,
+        "min_change_level": "none",
         "max_duration_minutes": None,
         "preferred_departure_from": datetime(2026, 1, 1, 7).time(),
         "preferred_departure_to": datetime(2026, 1, 1, 11).time(),
@@ -72,9 +72,16 @@ class ConstraintBoundaryTests(unittest.TestCase):
         offer = make_offer(departure=datetime(2026, 7, 14, 23, 30), arrival=datetime(2026, 7, 15, 7, 35))
         self.assertIsNone(rule.check(offer))
 
-    def test_changeable_accepts_fee_and_free_but_not_none(self):
-        rule = ChangeableConstraint()
+    def test_change_level_fee_accepts_fee_and_free(self):
+        rule = ChangeLevelConstraint("fee")
         for option, passes in (("none", False), ("fee", True), ("free", True)):
+            offer = make_offer(fare=FareConditions("standard", option, False))
+            with self.subTest(changeable=option):
+                self.assertEqual(rule.check(offer) is None, passes)
+
+    def test_change_level_free_accepts_only_free(self):
+        rule = ChangeLevelConstraint("free")
+        for option, passes in (("none", False), ("fee", False), ("free", True)):
             offer = make_offer(fare=FareConditions("standard", option, False))
             with self.subTest(changeable=option):
                 self.assertEqual(rule.check(offer) is None, passes)
@@ -92,12 +99,12 @@ class ConstraintsForProfileTests(unittest.TestCase):
 
     def test_optional_constraints_only_when_requested(self):
         names = {rule.name for rule in constraints_for(make_profile())}
-        self.assertNotIn("changeable ticket", names)
+        self.assertNotIn("change level", names)
         self.assertNotIn("duration", names)
 
-        strict = make_profile(changeable_required=True, max_duration_minutes=480)
+        strict = make_profile(min_change_level="free", max_duration_minutes=480)
         names = {rule.name for rule in constraints_for(strict)}
-        self.assertIn("changeable ticket", names)
+        self.assertIn("change level", names)
         self.assertIn("duration", names)
 
 

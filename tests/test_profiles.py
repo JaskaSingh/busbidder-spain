@@ -18,7 +18,7 @@ VALID_PROFILE = {
     "max_price_eur": 50,
     "seats_needed": 1,
     "max_transfers": 1,
-    "changeable_required": False,
+    "min_change_level": "none",
     "max_duration_minutes": None,
     "preferred_departure_from": "07:00",
     "preferred_departure_to": "11:00",
@@ -80,7 +80,8 @@ class ProfileFileTests(unittest.TestCase):
         self.assertEqual(budget.destination_id, "MAL")
         self.assertEqual(budget.earliest_date, date(2026, 7, 12))
         self.assertEqual(budget.preferred_departure_from, time(7, 0))
-        self.assertTrue(profiles["business"].changeable_required)
+        self.assertEqual(profiles["business"].min_change_level, "free")
+        self.assertEqual(profiles["flexible"].min_change_level, "fee")
 
     def test_valid_profile_loads(self):
         profiles = load_profiles(self.write_profile())
@@ -101,6 +102,10 @@ class ProfileFileTests(unittest.TestCase):
         with self.assertRaises(ConfigError) as context:
             load_profiles(path)
         self.assertIn("max_prise_eur", context.exception.reason)
+
+    def test_unknown_change_level_is_rejected(self):
+        with self.assertRaises(ConfigError):
+            load_profiles(self.write_profile(min_change_level="sometimes"))
 
     def test_dates_in_wrong_order_are_rejected(self):
         with self.assertRaises(ConfigError):
