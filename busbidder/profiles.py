@@ -8,11 +8,14 @@ hard rule for one traveller and only a preference for another.
 """
 
 import json
+import logging
 
 from .criteria import available_criteria
 from .errors import ConfigError, DataFileError, InvalidValueError
 from .models import CHANGE_OPTIONS
 from .validation import Bounded, clean_code, parse_choice, parse_date, parse_time, require_text
+
+logger = logging.getLogger(__name__)
 
 PROFILE_KEYS = {
     "label", "destination_id", "earliest_date", "latest_date", "max_price_eur",
@@ -134,4 +137,5 @@ def load_profiles(path):
             profiles[name] = _profile_from_dict(name, profile_data)
         except InvalidValueError as error:
             raise ConfigError(path, f"profile '{name}': {error}") from None
+    logger.info("Loaded %d profiles from %s: %s", len(profiles), path, ", ".join(profiles))
     return profiles

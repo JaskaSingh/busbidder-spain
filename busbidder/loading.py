@@ -13,6 +13,7 @@ Safe corrections (spaces and case in codes) are recorded in corrections.
 """
 
 import csv
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -30,6 +31,8 @@ from .validation import (
     to_optional_float,
     validate_identifier,
 )
+
+logger = logging.getLogger(__name__)
 
 COMPANY_COLUMNS = ["company_id", "name", "profile"]
 DESTINATION_COLUMNS = ["destination_id", "name", "distance_km", "coastal"]
@@ -123,6 +126,7 @@ def _load_reference(path, columns, id_field, build):
             items[item_id] = build(item_id, row)
         except InvalidValueError as error:
             raise DataFileError(path, f"line {line}: {error}") from None
+    logger.info("Loaded %d records from %s", len(items), path)
     return items
 
 
@@ -183,6 +187,16 @@ def load_offers(path, companies, destinations):
         else:
             result.offers.append(offer)
 
+    for issue in result.rejected:
+        logger.warning("Rejected %s", issue.describe())
+    for issue in result.review:
+        logger.warning("Set aside for review %s", issue.describe())
+    for correction in result.corrections:
+        logger.info(
+            "Corrected %s line %d (%s): %s %r to %r", correction.source, correction.line,
+            correction.offer_id, correction.field, correction.original, correction.corrected,
+        )
+    logger.info("Loaded %s: %s", source, result.summary())
     return result
 
 
