@@ -11,8 +11,11 @@ from busbidder.booking import (
     BookingStore,
     generate_reference,
 )
-from busbidder.errors import DataFileError, InvalidValueError
+from busbidder.errors import BookingError, DataFileError, InvalidValueError
+from busbidder.filtering import constraints_for, filter_offers
 from busbidder.models import FareConditions
+from tests.test_filtering import make_profile
+from tests.test_models import make_offer
 
 BOOKED_AT = datetime(2026, 10, 20, 12, 0, 0)
 
@@ -133,6 +136,80 @@ class BookingStoreTests(unittest.TestCase):
         with self.assertRaises(DataFileError) as context:
             BookingStore(self.path)
         self.assertIn("seats", context.exception.reason)
+
+
+class SeatReservationTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = Path(self.temp.name) / "bookings.json"
+        self.store = BookingStore(self.path, rng=random.Random(42))
+        self.offer = make_offer(
+            offer_id="OFR-00001",
+            available_seats=3,
+            departure=datetime(2026, 7, 13, 10, 0),
+            arrival=datetime(2026, 7, 13, 17, 0),
+        )
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def book(self, seats=1):
+        return self.store.book(self.offer, seats, "budget", booked_at=BOOKED_AT)
+
+    def test_booking_reduces_seats_left_and_keeps_offer_unchanged(self):
+        booking = self.book(2)
+        self.assertEqual(self.store.seats_left(self.offer), 1)
+        self.assertEqual(self.offer.available_seats, 3)
+        self.assertEqual(booking.total_price_eur, round(2 * self.offer.price_eur, 2))
+        self.assertEqual(booking.fare, self.offer.fare)
+
+    def test_last_seat_can_be_booked_then_next_attempt_fails(self):
+        self.book(2)
+        self.book(1)
+        self.assertEqual(self.store.seats_left(self.offer), 0)
+        with self.assertRaises(BookingError):
+            self.book(1)
+
+    def test_too_many_seats_fails_and_nothing_is_saved(self):
+        with self.assertRaises(BookingError):
+            self.book(4)
+        self.assertEqual(self.store.bookings, [])
+        self.assertFalse(self.path.exists())
+
+    def test_invalid_seat_counts_are_refused(self):
+        for bad in (0, -1, 1.5, True, "2"):
+            with self.subTest(seats=bad):
+                with self.assertRaises(BookingError):
+                    self.book(bad)
+
+    def test_bookings_survive_a_restart(self):
+        first = self.book(2)
+        restarted = BookingStore(self.path)
+        self.assertEqual(restarted.seats_left(self.offer), 1)
+        self.assertEqual(restarted.find(first.reference).seats, 2)
+
+    def test_every_booking_gets_a_unique_reference(self):
+        references = {self.book(1).reference for _ in range(3)}
+        self.assertEqual(len(references), 3)
+
+    def test_failed_save_leaves_no_booking_behind(self):
+        def broken_save():
+            raise OSError("disk full")
+        self.store.save = broken_save
+        with self.assertRaises(DataFileError):
+            self.book(1)
+        self.assertEqual(self.store.bookings, [])
+        self.assertEqual(self.store.seats_left(self.offer), 3)
+
+    def test_filtering_uses_seats_left_after_bookings(self):
+        profile = make_profile(seats_needed=2)
+        self.book(2)
+        before = filter_offers([self.offer], constraints_for(profile))
+        after = filter_offers([self.offer], constraints_for(profile, self.store.seats_left))
+        self.assertEqual(before.accepted, [self.offer])
+        self.assertEqual(after.accepted, [])
+        self.assertEqual(after.counts_by_constraint(), {"seats": 1})
 
 
 if __name__ == "__main__":

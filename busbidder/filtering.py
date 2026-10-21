@@ -68,15 +68,28 @@ class BudgetConstraint(Constraint):
         return None
 
 
+def original_seats(offer):
+    return offer.available_seats
+
+
 class SeatsConstraint(Constraint):
+    """Enough seats must be left for the whole party.
+
+    seats_left is a function giving the seats still free on an offer. By
+    default it uses the offer file. When bookings exist, the booking store's
+    seats_left is passed in, so booked seats are taken into account.
+    """
+
     name = "seats"
 
-    def __init__(self, seats_needed):
+    def __init__(self, seats_needed, seats_left=original_seats):
         self.seats_needed = seats_needed
+        self.seats_left = seats_left
 
     def check(self, offer):
-        if offer.available_seats < self.seats_needed:
-            return f"has {offer.available_seats} seat(s) left, {self.seats_needed} needed"
+        left = self.seats_left(offer)
+        if left < self.seats_needed:
+            return f"has {left} seat(s) left, {self.seats_needed} needed"
         return None
 
 
@@ -122,13 +135,13 @@ class MaxDurationConstraint(Constraint):
         return None
 
 
-def constraints_for(profile):
+def constraints_for(profile, seats_left=original_seats):
     """Build the list of hard constraints that apply to one traveller."""
     constraints = [
         DestinationConstraint(profile.destination_id),
         DateWindowConstraint(profile.earliest_date, profile.latest_date),
         BudgetConstraint(profile.max_price_eur),
-        SeatsConstraint(profile.seats_needed),
+        SeatsConstraint(profile.seats_needed, seats_left),
         TransfersConstraint(profile.max_transfers),
     ]
     if profile.min_change_level != "none":

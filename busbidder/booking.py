@@ -9,6 +9,7 @@ handled. Payment status is simulated.
 """
 
 import json
+import logging
 import os
 import random
 import re
@@ -16,9 +17,11 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from .errors import DataFileError, InvalidValueError
+from .errors import BookingError, DataFileError, InvalidValueError
 from .models import FareConditions
 from .validation import Bounded, validate_identifier
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_BOOKINGS_PATH = Path("state") / "bookings.json"
 
@@ -176,3 +179,48 @@ class BookingStore:
 
     def new_reference(self, year):
         return generate_reference(self.rng, year, self.references())
+
+    def seats_left(self, offer):
+        """Original seats on the offer minus seats already booked on it."""
+        return offer.available_seats - self.seats_booked(offer.offer_id)
+
+    def book(self, offer, seats, profile_name, booked_at=None):
+        """Reserve seats on an offer, save the booking and return it.
+
+        Seats are checked again at the moment of booking, because the
+        ranking may be out of date. If saving fails, the booking is removed
+        again so the store never holds a booking that is not on disk.
+        """
+        if isinstance(seats, bool) or not isinstance(seats, int) or seats < 1:
+            raise BookingError(f"Number of seats must be a whole number of at least 1, not {seats!r}.")
+        left = self.seats_left(offer)
+        if seats > left:
+            raise BookingError(
+                f"{offer.offer_id} has {left} seat(s) left, so {seats} cannot be booked."
+            )
+
+        booking = Booking(
+            reference=self.new_reference(offer.departure.year),
+            offer_id=offer.offer_id,
+            company_id=offer.company.company_id,
+            destination_id=offer.destination.destination_id,
+            departure=offer.departure,
+            seats=seats,
+            price_per_seat_eur=offer.price_eur,
+            fare=offer.fare,
+            profile_name=profile_name,
+            booked_at=booked_at or datetime.now().replace(microsecond=0),
+        )
+        self.bookings.append(booking)
+        try:
+            self.save()
+        except OSError as error:
+            self.bookings.remove(booking)
+            raise DataFileError(self.path, f"booking could not be saved ({error})") from None
+
+        logger.info(
+            "Booked %s: %d seat(s) on %s for profile %s, EUR %.2f, %d seat(s) left",
+            booking.reference, seats, offer.offer_id, profile_name,
+            booking.total_price_eur, self.seats_left(offer),
+        )
+        return booking

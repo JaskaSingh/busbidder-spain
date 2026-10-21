@@ -45,3 +45,7 @@ class RegistryError(BusBidderError):
         self.name = name
         self.reason = reason
         super().__init__(f"{name!r} {reason}")
+
+
+class BookingError(BusBidderError):
+    """A booking cannot be made, for example because too few seats are left."""
