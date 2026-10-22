@@ -2,7 +2,8 @@
 
     python3 -m busbidder rank --profile budget
     python3 -m busbidder compare --profiles budget business flexible
-    python3 -m busbidder validate --offers data/offers_invalid.csv
+    python3 -m busbidder book --profile business
+    python3 -m busbidder --offers data/offers_invalid.csv validate
 
 Every command loads the data, does its work and prints a summary. Expected
 problems (missing files, invalid profiles, unknown names) are caught here,
@@ -22,7 +23,7 @@ from .filtering import constraints_for, filter_offers
 from .loading import load_companies, load_destinations, load_offers
 from .logging_setup import DEFAULT_LOG_DIR, configure_logging
 from .profiles import load_profiles
-from .reporting import format_load_result, format_profile, format_ranking
+from .reporting import format_booking, format_load_result, format_profile, format_ranking
 from .scoring import DEFAULT_STRATEGY, STRATEGIES, rank_offers
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,12 @@ def build_parser():
     compare.add_argument("--strategy", choices=strategies, default=DEFAULT_STRATEGY)
     compare.add_argument("--top", type=int, default=3, help="offers shown per profile (default: 3)")
     compare.set_defaults(handler=command_compare)
+
+    book = commands.add_parser("book", help="rank offers for a profile, then choose one and book it")
+    book.add_argument("--profile", required=True, help="profile name from the profiles file")
+    book.add_argument("--strategy", choices=strategies, default=DEFAULT_STRATEGY)
+    book.add_argument("--top", type=int, default=5, help="offers to choose from (default: 5)")
+    book.set_defaults(handler=command_book)
 
     validate = commands.add_parser("validate", help="check an offer file and list every problem")
     validate.set_defaults(handler=command_validate)
@@ -129,6 +136,101 @@ def command_compare(args):
     print()
     distinct = len(set(winners))
     print(f"{len(profiles)} profiles, {distinct} different first-ranked offer(s).")
+    return EXIT_OK
+
+
+class Cancelled(Exception):
+    """The user chose to stop the booking. Not an error."""
+
+
+def ask(prompt, input_func):
+    """Read one answer. End of input (Ctrl+D) or Ctrl+C cancels the booking."""
+    try:
+        return input_func(prompt).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        raise Cancelled from None
+
+
+def ask_number(prompt, low, high, input_func, default=None):
+    """Ask until the answer is a whole number from low to high, or q to cancel.
+
+    Empty input uses the default if there is one, otherwise asks again.
+    """
+    while True:
+        answer = ask(prompt, input_func)
+        if answer.lower() == "q":
+            raise Cancelled
+        if answer == "" and default is not None:
+            return default
+        if not answer.isdigit():
+            print(f"Please enter a number from {low} to {high}, or q to cancel.")
+            continue
+        number = int(answer)
+        if not low <= number <= high:
+            print(f"{number} is not between {low} and {high}. Please try again.")
+            continue
+        return number
+
+
+def ask_yes_no(prompt, input_func):
+    while True:
+        answer = ask(prompt, input_func).lower()
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("n", "no", "q"):
+            return False
+        print("Please answer y or n.")
+
+
+def command_book(args, input_func=None):
+    """Show the ranking, let the traveller choose an offer and seats, confirm and book."""
+    # Look input up when the command runs (not when the module loads), so
+    # tests can replace it.
+    input_func = input_func or (lambda prompt: input(prompt))
+    context = Context(args)
+    profile = context.profile(args.profile)
+    filtered, ranking = context.rank_for(profile, args.strategy)
+
+    print(format_profile(profile))
+    print()
+    print(filtered.summary())
+    print()
+    print(format_ranking(ranking, args.top))
+    if not ranking:
+        print("Nothing can be booked with these constraints.")
+        return EXIT_OK
+    print()
+    print(explain_top(ranking, profile).text())
+    print()
+
+    choices = ranking[:args.top]
+    try:
+        position = ask_number(
+            f"Choose an offer by rank (1 to {len(choices)}), or q to cancel: ",
+            1, len(choices), input_func,
+        )
+        offer = choices[position - 1].offer
+        left = context.store.seats_left(offer)
+        seats = ask_number(
+            f"Seats to book (1 to {left}, Enter for {min(profile.seats_needed, left)}): ",
+            1, left, input_func, default=min(profile.seats_needed, left),
+        )
+        total = seats * offer.price_eur
+        print(
+            f"\nBook {seats} seat(s) on {offer.offer_id} {offer.company.name} "
+            f"{offer.departure:%a %d %b %H:%M} for EUR {total:.2f} ({offer.fare.describe()})?"
+        )
+        if not ask_yes_no("Confirm (y/n): ", input_func):
+            raise Cancelled
+    except Cancelled:
+        print("Booking cancelled. Nothing was saved.")
+        logger.info("Booking cancelled by user for profile %s", profile.name)
+        return EXIT_OK
+
+    booking = context.store.book(offer, seats, profile.name)
+    print()
+    print(format_booking(booking, offer, context.store.seats_left(offer), context.store.path))
     return EXIT_OK
 
 

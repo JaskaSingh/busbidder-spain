@@ -61,7 +61,8 @@ class Issue:
     reason: str
 
     def describe(self):
-        return f"{self.source} line {self.line} ({self.offer_id}): {self.field} = {self.value!r} {self.reason}"
+        value = "" if self.value is None else f" = {self.value!r}"
+        return f"{self.source} line {self.line} ({self.offer_id}): {self.field}{value} {self.reason}"
 
 
 @dataclass(frozen=True)

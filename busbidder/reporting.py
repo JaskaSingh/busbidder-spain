@@ -62,13 +62,31 @@ def format_ranking(ranking, top=10):
     return "\n".join(lines)
 
 
+def format_booking(booking, offer, seats_left, path):
+    arrival = offer.arrival.strftime("%H:%M") if offer.arrival.date() == offer.departure.date() \
+        else offer.arrival.strftime("%a %d %b %H:%M")
+    return "\n".join([
+        "Booking confirmed",
+        f"  Reference:   {booking.reference}",
+        f"  Offer:       {offer.offer_id} {offer.company.name} ({offer.fare.fare_type}), "
+        f"Madrid to {offer.destination.name}",
+        f"  Departure:   {offer.departure:%a %d %b %Y %H:%M}, arrives {arrival}",
+        f"  Seats:       {booking.seats} x EUR {booking.price_per_seat_eur:.2f} = EUR {booking.total_price_eur:.2f}",
+        f"  Conditions:  {booking.fare.describe()}",
+        f"  Payment:     {booking.payment_status}",
+        f"  Seats left on this departure: {seats_left}",
+        f"  Saved to {path}",
+    ])
+
+
 def format_load_result(result):
     lines = [f"Offers: {result.summary()}."]
     for title, issues in (("Rejected", result.rejected), ("Set aside for review", result.review)):
         if issues:
             lines.append(f"{title}:")
             lines += [
-                f"  line {i.line:>3}  {i.offer_id or '?':<10} {i.field}: {i.value!r} {i.reason}"
+                f"  line {i.line:>3}  {i.offer_id or '?':<10} {i.field}:"
+                + ("" if i.value is None else f" {i.value!r}") + f" {i.reason}"
                 for i in issues
             ]
     if result.corrections:
