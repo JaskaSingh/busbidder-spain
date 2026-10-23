@@ -1,0 +1,16 @@
+{
+  "test": {
+    "label": "Integration test traveller",
+    "destination_id": "MAL",
+    "earliest_date": "2026-07-13",
+    "latest_date": "2026-07-13",
+    "max_price_eur": 50,
+    "seats_needed": 2,
+    "max_transfers": 1,
+    "min_change_level": "none",
+    "max_duration_minutes": null,
+    "preferred_departure_from": "08:00",
+    "preferred_departure_to": "12:00",
+    "weights": {"price": 40, "duration": 25, "departure_time": 15, "flexibility": 20}
+  }
+}

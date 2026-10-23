@@ -1,0 +1,11 @@
+offer_id,company_id,fare_type,destination_id,departure_date,departure_time,arrival_date,arrival_time,price_eur,transfers,luggage_kg,changeable,refundable,available_seats,rating,co2_kg
+OFR-00001,SOL,basic,MAL,2026-07-13,09:00,2026-07-13,16:30,30.00,0,15,none,no,10,3.5,
+OFR-00002,VER,standard,MAL,2026-07-13,10:00,2026-07-13,16:00,45.00,0,20,free,yes,2,4.2,6.4
+OFR-00003,CAM,standard,MAL,2026-07-13,08:30,2026-07-13,14:30,55.00,0,25,fee,no,20,4.4,15.9
+OFR-00004,COS,standard,MAL,2026-07-13,13:00,2026-07-13,20:00,35.00,1,20,fee,no,1,4.0,14.8
+OFR-00005,NOC,standard,MAL,2026-07-13,22:00,2026-07-14,06:15,32.00,1,20,fee,no,20,3.8,13.3
+OFR-00006,SOL,basic,MAL,2026-07-14,09:00,2026-07-14,16:30,30.00,0,15,none,no,10,3.5,
+OFR-00007,VER,standard,TOL,2026-07-13,09:00,2026-07-13,10:00,8.00,0,20,free,yes,30,4.2,0.9
+OFR-00008,COS,standard,MAL,2026-07-13,09:00,2026-07-13,16:00,-5.00,0,20,fee,no,10,4.0,14.8
+OFR-00009,SOL,basic,MAL,2026-07-13,11:00,2026-07-13,18:30,1.00,0,15,none,no,10,3.5,
+OFR-00010,CAM,standard,MAL,2026-07-13,09:30,2026-07-13,17:00,40.00,2,25,fee,no,10,4.4,15.9
