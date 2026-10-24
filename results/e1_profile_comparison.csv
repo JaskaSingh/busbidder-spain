@@ -1,0 +1,19 @@
+strategy,profile,rank,offer_id,company,fare_type,departure,price_eur,duration_min,price,duration,departure_time,flexibility,total
+anchored,budget,1,OFR-00322,CostaLink,standard,2026-07-12 06:30,36.11,400,27.8,80.5,87.5,50.0,46.9
+anchored,budget,2,OFR-00035,SolRuta,basic,2026-07-14 10:15,33.98,430,32.0,71.5,100.0,0.0,45.0
+anchored,budget,3,OFR-00036,SolRuta,plus,2026-07-14 10:15,40.78,430,18.4,71.5,100.0,50.0,41.8
+anchored,business,1,OFR-00186,Camino Express,flex,2026-07-12 11:30,76.70,370,36.1,75.7,37.5,100.0,65.1
+anchored,business,2,OFR-00188,Camino Express,flex,2026-07-13 17:45,76.87,360,35.9,82.6,0.0,100.0,56.6
+anchored,business,3,OFR-00190,Camino Express,flex,2026-07-14 18:00,81.01,360,32.5,82.6,0.0,100.0,56.3
+anchored,flexible,1,OFR-00398,VerdeBus,standard,2026-07-13 10:00,45.02,455,43.7,64.1,100.0,100.0,80.5
+anchored,flexible,2,OFR-00186,Camino Express,flex,2026-07-12 11:30,76.70,370,4.1,89.5,100.0,100.0,74.5
+anchored,flexible,3,OFR-00188,Camino Express,flex,2026-07-13 17:45,76.87,360,3.9,92.5,6.2,100.0,65.5
+minmax,budget,1,OFR-00035,SolRuta,basic,2026-07-14 10:15,33.98,430,100.0,61.1,100.0,0.0,84.2
+minmax,budget,2,OFR-00322,CostaLink,standard,2026-07-12 06:30,36.11,400,85.5,94.4,87.5,50.0,83.6
+minmax,budget,3,OFR-00323,CostaLink,standard,2026-07-13 15:15,35.33,395,90.8,100.0,0.0,50.0,74.5
+minmax,business,1,OFR-00186,Camino Express,flex,2026-07-12 11:30,76.70,370,12.0,89.5,50.0,100.0,72.0
+minmax,business,2,OFR-00188,Camino Express,flex,2026-07-13 17:45,76.87,360,11.5,100.0,0.0,100.0,61.2
+minmax,business,3,OFR-00398,VerdeBus,standard,2026-07-13 10:00,45.02,455,100.0,0.0,100.0,100.0,60.0
+minmax,flexible,1,OFR-00398,VerdeBus,standard,2026-07-13 10:00,45.02,455,75.6,24.0,100.0,100.0,82.5
+minmax,flexible,2,OFR-00186,Camino Express,flex,2026-07-12 11:30,76.70,370,0.4,92.0,100.0,100.0,73.9
+minmax,flexible,3,OFR-00188,Camino Express,flex,2026-07-13 17:45,76.87,360,0.0,100.0,6.2,100.0,65.6

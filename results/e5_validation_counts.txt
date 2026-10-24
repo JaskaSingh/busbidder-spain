@@ -1,0 +1,22 @@
+E5 Validation outcomes by file and field
+
+offers.csv: 527 accepted, 0 rejected, 0 set aside for review, 0 corrections
+
+offers_invalid.csv: 3 accepted, 16 rejected, 2 set aside for review, 2 corrections
+  rejected  arrival          1
+  rejected  available_seats  1
+  rejected  changeable       1
+  rejected  company_id       1
+  rejected  departure_date   1
+  rejected  departure_time   1
+  rejected  destination_id   1
+  rejected  offer_id         2
+  rejected  price_eur        4
+  rejected  rating           1
+  rejected  row              1
+  rejected  transfers        1
+  review    duration         1
+  review    price_eur        1
+  corrected company_id       1
+  corrected destination_id   1
+

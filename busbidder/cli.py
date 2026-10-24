@@ -4,6 +4,7 @@
     python3 -m busbidder compare --profiles budget business flexible
     python3 -m busbidder book --profile business
     python3 -m busbidder --offers data/offers_invalid.csv validate
+    python3 -m busbidder experiments --output results
 
 Every command loads the data, does its work and prints a summary. Expected
 problems (missing files, invalid profiles, unknown names) are caught here,
@@ -18,6 +19,7 @@ from pathlib import Path
 
 from .booking import DEFAULT_BOOKINGS_PATH, BookingStore
 from .errors import BusBidderError, ConfigError
+from .experiments import EXPERIMENTS, ExperimentData, run_experiments
 from .explain import explain_top
 from .filtering import constraints_for, filter_offers
 from .loading import load_companies, load_destinations, load_offers
@@ -71,6 +73,15 @@ def build_parser():
 
     validate = commands.add_parser("validate", help="check an offer file and list every problem")
     validate.set_defaults(handler=command_validate)
+
+    experiments = commands.add_parser(
+        "experiments", help="run the experiments and write their tables to an output folder"
+    )
+    experiments.add_argument("--output", type=Path, default=Path("results"),
+                             help="folder for result files (default: results)")
+    experiments.add_argument("--only", nargs="+", choices=EXPERIMENTS.names(), metavar="NAME",
+                             help=f"run only these experiments ({', '.join(EXPERIMENTS.names())})")
+    experiments.set_defaults(handler=command_experiments)
 
     return parser
 
@@ -237,6 +248,19 @@ def command_book(args, input_func=None):
 def command_validate(args):
     context = Context(args, need_profiles=False)
     print(format_load_result(context.load_result))
+    return EXIT_OK
+
+
+def command_experiments(args):
+    context = Context(args)
+    data = ExperimentData(
+        context.companies, context.destinations, context.offers, context.profiles, args.data_dir
+    )
+    summaries = run_experiments(data, args.output, args.only)
+    for name, lines in summaries.items():
+        print("\n".join(lines))
+    print(f"Results written to {args.output}/")
+    logger.info("Ran experiments %s into %s", ", ".join(summaries), args.output)
     return EXIT_OK
 
 

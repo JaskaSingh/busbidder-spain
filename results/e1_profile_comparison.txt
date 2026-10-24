@@ -1,0 +1,14 @@
+E1 Profile comparison: Madrid to Malaga, 12 to 14 July
+
+Strategy: anchored
+  budget     8 of 14 offers kept. First: OFR-00322 CostaLink standard 12 Jul 06:30 EUR 36.11 (46.9)
+  business   5 of 14 offers kept. First: OFR-00186 Camino Express flex 12 Jul 11:30 EUR 76.70 (65.1)
+  flexible  11 of 14 offers kept. First: OFR-00398 VerdeBus standard 13 Jul 10:00 EUR 45.02 (80.5)
+  3 different first-ranked offers for 3 profiles
+
+Strategy: minmax
+  budget     8 of 14 offers kept. First: OFR-00035 SolRuta basic 14 Jul 10:15 EUR 33.98 (84.2)
+  business   5 of 14 offers kept. First: OFR-00186 Camino Express flex 12 Jul 11:30 EUR 76.70 (72.0)
+  flexible  11 of 14 offers kept. First: OFR-00398 VerdeBus standard 13 Jul 10:00 EUR 45.02 (82.5)
+  3 different first-ranked offers for 3 profiles
+
