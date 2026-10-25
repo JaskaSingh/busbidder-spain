@@ -1,0 +1,15 @@
+part,budget_eur,offers_kept,edge_offer_kept,winner,company,winner_price_eur,winner_price_score,total
+edge,48.63,7,False,OFR-00322,CostaLink,36.11,25.7,45.6
+edge,48.64,8,True,OFR-00322,CostaLink,36.11,25.8,45.7
+edge,48.65,8,True,OFR-00322,CostaLink,36.11,25.8,45.7
+sweep,30.00,0,False,,,,,
+sweep,35.00,2,False,OFR-00035,SolRuta,33.98,2.9,27.5
+sweep,40.00,5,False,OFR-00322,CostaLink,36.11,9.7,36.0
+sweep,45.00,6,False,OFR-00322,CostaLink,36.11,19.8,42.1
+sweep,50.00,8,True,OFR-00322,CostaLink,36.11,27.8,46.9
+sweep,55.00,8,True,OFR-00322,CostaLink,36.11,34.3,50.8
+sweep,60.00,8,True,OFR-00322,CostaLink,36.11,39.8,54.1
+sweep,65.00,11,True,OFR-00322,CostaLink,36.11,44.4,56.9
+sweep,70.00,11,True,OFR-00322,CostaLink,36.11,48.4,59.2
+sweep,75.00,11,True,OFR-00322,CostaLink,36.11,51.9,61.3
+sweep,80.00,13,True,OFR-00322,CostaLink,36.11,54.9,63.1

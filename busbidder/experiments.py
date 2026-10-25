@@ -12,11 +12,13 @@ Output files contain no timestamps, so running the command twice gives
 identical files.
 """
 
+import copy
 import csv
 from pathlib import Path
 
 from .filtering import constraints_for, filter_offers
 from .loading import load_offers
+from .profiles import validate_weights
 from .registry import Registry
 from .scoring import STRATEGIES, rank_offers
 
@@ -119,4 +121,124 @@ def validation_counts(data, output_dir):
         lines.append("")
     write_csv(output_dir / "e5_validation_counts.csv", header, rows)
     write_text(output_dir / "e5_validation_counts.txt", lines)
+    return lines
+
+
+def with_price_weight(weights, price_weight):
+    """New weights with the given price weight, keeping the others in proportion.
+
+    The other weights are scaled to share what is left of 100 and rounded to
+    whole percentages. Any rounding difference goes to the largest of them,
+    so the total is always exactly 100.
+    """
+    others = {name: weight for name, weight in weights.items() if name != "price"}
+    remaining = 100 - price_weight
+    total_others = sum(others.values())
+    if total_others == 0:
+        share = remaining // len(others)
+        scaled = {name: share for name in others}
+    else:
+        scaled = {name: round(remaining * weight / total_others) for name, weight in others.items()}
+    largest = max(others, key=lambda name: (others[name], name))
+    scaled[largest] += remaining - sum(scaled.values())
+    return {"price": price_weight, **scaled}
+
+
+def profile_variant(profile, **changes):
+    """A copy of a profile with some settings changed. The original is untouched."""
+    variant = copy.copy(profile)
+    for name, value in changes.items():
+        setattr(variant, name, value)
+    return variant
+
+
+@experiment("E2")
+def weight_sensitivity(data, output_dir):
+    """Price weight from 0 to 100% in steps of 10, other weights in proportion."""
+    header = ["profile", "price_weight", "weights", "winner", "company", "fare_type",
+              "price_eur", "total", "lead_over_second"]
+    rows, lines = [], ["E2 Weight sensitivity: price weight 0 to 100%, anchored scores", ""]
+    for profile in data.profiles.values():
+        segments = []
+        for price_weight in range(0, 101, 10):
+            weights = validate_weights(with_price_weight(profile.weights, price_weight))
+            variant = profile_variant(profile, weights=weights)
+            _, ranking = data.rank(variant)
+            if not ranking:
+                continue
+            top = ranking[0]
+            lead = top.total - ranking[1].total if len(ranking) > 1 else None
+            rows.append([
+                profile.name, price_weight,
+                " ".join(f"{name}={weight}" for name, weight in weights.items()),
+                top.offer.offer_id, top.offer.company.name, top.offer.fare.fare_type,
+                f"{top.offer.price_eur:.2f}", f"{top.total:.1f}",
+                "" if lead is None else f"{lead:.1f}",
+            ])
+            label = f"{top.offer.offer_id} {top.offer.company.name} {top.offer.fare.fare_type}"
+            if segments and segments[-1][2] == label:
+                segments[-1][1] = price_weight
+            else:
+                segments.append([price_weight, price_weight, label])
+        current = profile.weights["price"]
+        lines.append(f"{profile.name} (own price weight {current}%):")
+        for start, end, label in segments:
+            mark = "  <- own weight" if start <= current <= end else ""
+            lines.append(f"  price {start:>3}% to {end:>3}%: {label}{mark}")
+        lines.append(f"  {len(segments)} different winner(s) across the range")
+        lines.append("")
+    write_csv(output_dir / "e2_weight_sensitivity.csv", header, rows)
+    write_text(output_dir / "e2_weight_sensitivity.txt", lines)
+    return lines
+
+
+@experiment("E4")
+def budget_cliff(data, output_dir):
+    """How the budget, a hard constraint, changes what is kept and what wins.
+
+    Two parts for the budget profile: budgets one cent either side of the
+    most expensive offer it keeps (the cliff edge), and a sweep from EUR 30
+    to EUR 80.
+    """
+    profile = data.profiles["budget"]
+    _, ranking = data.rank(profile)
+    edge = max(scored.offer.price_eur for scored in ranking)
+    edge_offer = max(ranking, key=lambda scored: scored.offer.price_eur).offer
+    budgets = [round(edge - 0.01, 2), edge, round(edge + 0.01, 2)]
+    sweep = list(range(30, 81, 5))
+
+    header = ["part", "budget_eur", "offers_kept", "edge_offer_kept", "winner", "company",
+              "winner_price_eur", "winner_price_score", "total"]
+    rows = []
+    lines = [
+        "E4 Budget cliff for the budget profile (anchored scores)",
+        f"Most expensive offer kept at EUR 50: {edge_offer.offer_id} {edge_offer.company.name} "
+        f"EUR {edge_offer.price_eur:.2f}",
+        "",
+    ]
+    for part, values in (("edge", budgets), ("sweep", sweep)):
+        lines.append("Cliff edge:" if part == "edge" else "Budget sweep:")
+        for budget in values:
+            variant = profile_variant(profile, max_price_eur=budget)
+            filtered, ranking = data.rank(variant)
+            kept_ids = {offer.offer_id for offer in filtered.accepted}
+            edge_kept = edge_offer.offer_id in kept_ids
+            if ranking:
+                top = ranking[0]
+                rows.append([part, f"{budget:.2f}", len(filtered.accepted), edge_kept,
+                             top.offer.offer_id, top.offer.company.name,
+                             f"{top.offer.price_eur:.2f}", f"{top.scores['price']:.1f}",
+                             f"{top.total:.1f}"])
+                lines.append(
+                    f"  EUR {budget:>6.2f}: {len(filtered.accepted):>2} kept, "
+                    f"{edge_offer.offer_id} {'kept' if edge_kept else 'removed'}. "
+                    f"First: {top.offer.offer_id} {top.offer.company.name} "
+                    f"(price score {top.scores['price']:.0f}, total {top.total:.1f})"
+                )
+            else:
+                rows.append([part, f"{budget:.2f}", 0, False, "", "", "", "", ""])
+                lines.append(f"  EUR {budget:>6.2f}:  0 kept")
+        lines.append("")
+    write_csv(output_dir / "e4_budget_cliff.csv", header, rows)
+    write_text(output_dir / "e4_budget_cliff.txt", lines)
     return lines

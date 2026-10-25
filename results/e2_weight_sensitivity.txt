@@ -1,0 +1,20 @@
+E2 Weight sensitivity: price weight 0 to 100%, anchored scores
+
+budget (own price weight 60%):
+  price   0% to  30%: OFR-00398 VerdeBus standard
+  price  40% to  70%: OFR-00322 CostaLink standard  <- own weight
+  price  80% to 100%: OFR-00035 SolRuta basic
+  3 different winner(s) across the range
+
+business (own price weight 10%):
+  price   0% to  30%: OFR-00186 Camino Express flex  <- own weight
+  price  40% to 100%: OFR-00398 VerdeBus standard
+  2 different winner(s) across the range
+
+flexible (own price weight 25%):
+  price   0% to  10%: OFR-00186 Camino Express flex
+  price  20% to  70%: OFR-00398 VerdeBus standard  <- own weight
+  price  80% to  90%: OFR-00323 CostaLink standard
+  price 100% to 100%: OFR-00468 NocheVia standard
+  4 different winner(s) across the range
+

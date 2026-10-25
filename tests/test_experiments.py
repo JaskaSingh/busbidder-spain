@@ -6,7 +6,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from busbidder.cli import EXIT_OK, main
-from busbidder.experiments import EXPERIMENTS
+from busbidder.experiments import EXPERIMENTS, profile_variant, with_price_weight
+from tests.test_filtering import make_profile
 from busbidder.logging_setup import close_logging
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -89,6 +90,49 @@ class ExperimentCommandTests(unittest.TestCase):
         rows = self.read_csv("e1_profile_comparison.csv")
         winner = next(r for r in rows if r["strategy"] == "anchored" and r["profile"] == "business" and r["rank"] == "1")
         self.assertEqual(winner["offer_id"], "OFR-00186")
+
+
+class HelperTests(unittest.TestCase):
+
+    def test_price_weight_keeps_other_weights_in_proportion(self):
+        weights = {"price": 40, "duration": 25, "departure_time": 15, "flexibility": 20}
+        self.assertEqual(with_price_weight(weights, 40), weights)
+        # 30% is shared 25:15:20, giving 12.5, 7.5 and 10. Python rounds
+        # halves to the nearest even number, so 12 and 8.
+        self.assertEqual(
+            with_price_weight(weights, 70),
+            {"price": 70, "duration": 12, "departure_time": 8, "flexibility": 10},
+        )
+
+    def test_price_weight_always_totals_100(self):
+        weights = {"price": 60, "duration": 15, "departure_time": 15, "flexibility": 10}
+        for price_weight in range(0, 101, 10):
+            with self.subTest(price_weight=price_weight):
+                result = with_price_weight(weights, price_weight)
+                self.assertEqual(sum(result.values()), 100)
+                self.assertEqual(result["price"], price_weight)
+
+    def test_profile_variant_leaves_original_unchanged(self):
+        profile = make_profile(max_price_eur=50)
+        variant = profile_variant(profile, max_price_eur=60)
+        self.assertEqual((profile.max_price_eur, variant.max_price_eur), (50, 60))
+
+
+class SensitivityAndCliffTests(ExperimentCommandTests):
+
+    def test_e2_marks_each_profile_own_weight(self):
+        out = self.run_experiments("--only", "E2")
+        self.assertEqual(out.count("<- own weight"), 3)
+        rows = self.read_csv("e2_weight_sensitivity.csv")
+        self.assertEqual(len([r for r in rows if r["profile"] == "budget"]), 11)
+        own = next(r for r in rows if r["profile"] == "business" and r["price_weight"] == "10")
+        self.assertEqual(own["winner"], "OFR-00186")
+
+    def test_e4_cliff_edge_removes_exactly_one_offer(self):
+        self.run_experiments("--only", "E4")
+        edge = [r for r in self.read_csv("e4_budget_cliff.csv") if r["part"] == "edge"]
+        self.assertEqual([int(r["offers_kept"]) for r in edge], [7, 8, 8])
+        self.assertEqual([r["edge_offer_kept"] for r in edge], ["False", "True", "True"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+E4 Budget cliff for the budget profile (anchored scores)
+Most expensive offer kept at EUR 50: OFR-00397 VerdeBus EUR 48.64
+
+Cliff edge:
+  EUR  48.63:  7 kept, OFR-00397 removed. First: OFR-00322 CostaLink (price score 26, total 45.6)
+  EUR  48.64:  8 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 26, total 45.7)
+  EUR  48.65:  8 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 26, total 45.7)
+
+Budget sweep:
+  EUR  30.00:  0 kept
+  EUR  35.00:  2 kept, OFR-00397 removed. First: OFR-00035 SolRuta (price score 3, total 27.5)
+  EUR  40.00:  5 kept, OFR-00397 removed. First: OFR-00322 CostaLink (price score 10, total 36.0)
+  EUR  45.00:  6 kept, OFR-00397 removed. First: OFR-00322 CostaLink (price score 20, total 42.1)
+  EUR  50.00:  8 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 28, total 46.9)
+  EUR  55.00:  8 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 34, total 50.8)
+  EUR  60.00:  8 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 40, total 54.1)
+  EUR  65.00: 11 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 44, total 56.9)
+  EUR  70.00: 11 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 48, total 59.2)
+  EUR  75.00: 11 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 52, total 61.3)
+  EUR  80.00: 13 kept, OFR-00397 kept. First: OFR-00322 CostaLink (price score 55, total 63.1)
+
