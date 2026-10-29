@@ -135,5 +135,28 @@ class SensitivityAndCliffTests(ExperimentCommandTests):
         self.assertEqual([r["edge_offer_kept"] for r in edge], ["False", "True", "True"])
 
 
+class ReversalAndBookingTests(ExperimentCommandTests):
+
+    def test_e3_anchored_never_reverses_minmax_does(self):
+        self.run_experiments("--only", "E3")
+        rows = self.read_csv("e3_rank_reversal.csv")
+        anchored = [r for r in rows if r["strategy"] == "anchored"]
+        minmax = [r for r in rows if r["strategy"] == "minmax"]
+        self.assertTrue(anchored)
+        self.assertFalse(any(r["order_changed"] == "True" for r in anchored))
+        reversal = [r for r in minmax if r["winner_with"] != r["winner_without"]]
+        self.assertEqual(
+            [(r["profile"], r["left_out"], r["winner_with"], r["winner_without"]) for r in reversal],
+            [("budget", "OFR-00398", "OFR-00035", "OFR-00322")],
+        )
+
+    def test_e6_all_checks_pass_and_real_bookings_untouched(self):
+        out = self.run_experiments("--only", "E6")
+        self.assertIn("10 of 10 checks passed", out)
+        self.assertFalse((self.folder / "bookings.json").exists())
+        results = [r["result"] for r in self.read_csv("e6_booking_consistency.csv")]
+        self.assertEqual(set(results), {"pass"})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,16 @@
+E6 Booking consistency
+Offer: OFR-00186 Camino Express flex, 16 seats, business profile
+References: BB-2026-SWLL2G, BB-2026-FHLFCT
+
+  seats left before booking            expected 16                           got 16                           pass
+  book 15 seats                        expected 1                            got 1                            pass
+  book the last seat                   expected 0                            got 0                            pass
+  try one more seat                    expected refused                      got refused                      pass
+  bookings saved after refusal         expected 2                            got 2                            pass
+  seats left after restart             expected 0                            got 0                            pass
+  references unique                    expected True                         got True                         pass
+  fare conditions stored               expected free change, refundable      got free change, refundable      pass
+  offer data unchanged                 expected 16                           got 16                           pass
+  sold-out offer still in ranking      expected False                        got False                        pass
+
+10 of 10 checks passed

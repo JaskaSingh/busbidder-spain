@@ -1,0 +1,11 @@
+step,expected,actual,result
+seats left before booking,16,16,pass
+book 15 seats,1,1,pass
+book the last seat,0,0,pass
+try one more seat,refused,refused,pass
+bookings saved after refusal,2,2,pass
+seats left after restart,0,0,pass
+references unique,True,True,pass
+fare conditions stored,"free change, refundable","free change, refundable",pass
+offer data unchanged,16,16,pass
+sold-out offer still in ranking,False,False,pass

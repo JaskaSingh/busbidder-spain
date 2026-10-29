@@ -1,0 +1,20 @@
+E3 Rank reversal: leave each accepted offer out and rank the rest again
+
+Strategy: anchored
+  budget     8 offers: 0 of 8 removals change the order of the rest, 0 change the winner
+  business   5 offers: 0 of 5 removals change the order of the rest, 0 change the winner
+  flexible  11 offers: 0 of 11 removals change the order of the rest, 0 change the winner
+
+Strategy: minmax
+  budget     8 offers: 1 of 8 removals change the order of the rest, 1 change the winner
+  business   5 offers: 1 of 5 removals change the order of the rest, 0 change the winner
+  flexible  11 offers: 0 of 11 removals change the order of the rest, 0 change the winner
+
+Example (minmax, budget): leaving out OFR-00398 VerdeBus, ranked 7 of 8, swaps the top two.
+  OFR-00035 SolRuta
+    with     84.2  (Price 100 Dur  61 Time 100 Flex   0)
+    without  84.2  (Price 100 Dur  61 Time 100 Flex   0)
+  OFR-00322 CostaLink
+    with     83.6  (Price  85 Dur  94 Time  88 Flex  50)
+    without  85.2  (Price  85 Dur  94 Time  88 Flex  67)
+

@@ -14,12 +14,18 @@ identical files.
 
 import copy
 import csv
+import random
+import tempfile
+from datetime import datetime
 from pathlib import Path
 
+from .booking import BookingStore
+from .errors import BookingError
 from .filtering import constraints_for, filter_offers
 from .loading import load_offers
 from .profiles import validate_weights
 from .registry import Registry
+from .reporting import short_name
 from .scoring import STRATEGIES, rank_offers
 
 EXPERIMENTS = Registry("experiment")
@@ -241,4 +247,128 @@ def budget_cliff(data, output_dir):
         lines.append("")
     write_csv(output_dir / "e4_budget_cliff.csv", header, rows)
     write_text(output_dir / "e4_budget_cliff.txt", lines)
+    return lines
+
+
+@experiment("E3")
+def rank_reversal(data, output_dir):
+    """Does removing one offer change the order of the others?
+
+    For every profile and strategy, each accepted offer is left out in turn
+    and the remaining offers are ranked again. If their order differs from
+    their order in the full ranking, the left-out offer influenced how the
+    others compare with each other. Read the other way round, adding that
+    offer reversed their order.
+    """
+    header = ["strategy", "profile", "offers", "left_out", "left_out_rank",
+              "order_changed", "winner_with", "winner_without"]
+    rows = []
+    lines = ["E3 Rank reversal: leave each accepted offer out and rank the rest again", ""]
+    examples = []
+    for strategy in STRATEGIES.names():
+        lines.append(f"Strategy: {strategy}")
+        for profile in data.profiles.values():
+            filtered, full = data.rank(profile, strategy)
+            full_order = [scored.offer.offer_id for scored in full]
+            changed = winner_changed = 0
+            for scored in full:
+                left_out = scored.offer
+                rest = [offer for offer in filtered.accepted if offer is not left_out]
+                _, reranked = data.rank(profile, strategy, offers=rest)
+                new_order = [s.offer.offer_id for s in reranked]
+                expected = [offer_id for offer_id in full_order if offer_id != left_out.offer_id]
+                order_changed = new_order != expected
+                changed += order_changed
+                if order_changed and new_order and new_order[0] != expected[0]:
+                    winner_changed += 1
+                    examples.append((strategy, profile, left_out, scored.rank, full, reranked))
+                rows.append([
+                    strategy, profile.name, len(full), left_out.offer_id, scored.rank,
+                    order_changed, expected[0] if expected else "", new_order[0] if new_order else "",
+                ])
+            lines.append(
+                f"  {profile.name:<9} {len(full):>2} offers: {changed} of {len(full)} removals "
+                f"change the order of the rest, {winner_changed} change the winner"
+            )
+        lines.append("")
+
+    for strategy, profile, left_out, rank, full, reranked in examples:
+        lines.append(
+            f"Example ({strategy}, {profile.name}): leaving out {left_out.offer_id} "
+            f"{left_out.company.name}, ranked {rank} of {len(full)}, swaps the top two."
+        )
+        others = {s.offer.offer_id: s for s in reranked}
+        for scored in full[:2]:
+            offer_id = scored.offer.offer_id
+            after = others[offer_id]
+            def detail(item):
+                return " ".join(f"{short_name(name)} {item.scores[name]:>3.0f}" for name in CRITERIA_ORDER)
+            lines.append(f"  {offer_id} {scored.offer.company.name}")
+            lines.append(f"    with    {scored.total:5.1f}  ({detail(scored)})")
+            lines.append(f"    without {after.total:5.1f}  ({detail(after)})")
+        lines.append("")
+    write_csv(output_dir / "e3_rank_reversal.csv", header, rows)
+    write_text(output_dir / "e3_rank_reversal.txt", lines)
+    return lines
+
+
+@experiment("E6")
+def booking_consistency(data, output_dir):
+    """Book up to the last seat, try once more, restart, and check what was kept.
+
+    Uses a temporary booking file and a seeded random generator, so the real
+    bookings are never touched and the references are the same on every run.
+    """
+    profile = data.profiles["business"]
+    _, ranking = data.rank(profile)
+    offer = ranking[0].offer
+    booked_at = datetime(2026, 7, 1, 12, 0)
+    steps = []
+
+    def record(step, expected, actual):
+        steps.append([step, expected, actual, "pass" if str(expected) == str(actual) else "FAIL"])
+
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "bookings.json"
+        store = BookingStore(path, rng=random.Random(4420))
+        start = store.seats_left(offer)
+        record("seats left before booking", offer.available_seats, start)
+
+        first = store.book(offer, start - 1, profile.name, booked_at=booked_at)
+        record(f"book {start - 1} seats", 1, store.seats_left(offer))
+        last = store.book(offer, 1, profile.name, booked_at=booked_at)
+        record("book the last seat", 0, store.seats_left(offer))
+
+        try:
+            store.book(offer, 1, profile.name, booked_at=booked_at)
+            outcome = "booked"
+        except BookingError:
+            outcome = "refused"
+        record("try one more seat", "refused", outcome)
+        record("bookings saved after refusal", 2, len(BookingStore(path).bookings))
+
+        restarted = BookingStore(path)
+        record("seats left after restart", 0, restarted.seats_left(offer))
+        record("references unique", True, len(restarted.references()) == 2)
+        saved = restarted.find(first.reference)
+        record("fare conditions stored", offer.fare.describe(), saved.fare.describe())
+        record("offer data unchanged", start, offer.available_seats)
+
+        filtered = filter_offers(data.offers, constraints_for(profile, restarted.seats_left))
+        record("sold-out offer still in ranking", False, offer in filtered.accepted)
+
+    header = ["step", "expected", "actual", "result"]
+    passed = sum(1 for step in steps if step[3] == "pass")
+    lines = [
+        "E6 Booking consistency",
+        f"Offer: {offer.offer_id} {offer.company.name} {offer.fare.fare_type}, "
+        f"{offer.available_seats} seats, business profile",
+        f"References: {first.reference}, {last.reference}",
+        "",
+    ]
+    lines += [f"  {step:<36} expected {expected!s:<28} got {actual!s:<28} {result}"
+              for step, expected, actual, result in steps]
+    lines += ["", f"{passed} of {len(steps)} checks passed"]
+    write_csv(output_dir / "e6_booking_consistency.csv", header, steps)
+    write_text(output_dir / "e6_booking_consistency.txt", lines)
     return lines
