@@ -68,6 +68,32 @@ class RankCommandTests(CliTestCase):
         self.assertIn("ConfigError", log)
 
 
+class ArgumentAndStateTests(CliTestCase):
+
+    def test_top_must_be_at_least_one(self):
+        for command in (["rank", "--profile", "budget"], ["book", "--profile", "budget"],
+                        ["compare", "--profiles", "budget"]):
+            for bad in ("0", "-2", "abc"):
+                with self.subTest(command=command[0], top=bad):
+                    with self.assertRaises(SystemExit) as context:
+                        self.run_cli(*command, "--top", bad)
+                    self.assertEqual(context.exception.code, 2)
+
+    def test_validate_and_experiments_ignore_a_corrupt_booking_file(self):
+        (self.folder / "bookings.json").write_text("{ broken", encoding="utf-8")
+        code, out, _ = self.run_cli("validate")
+        self.assertEqual(code, EXIT_OK)
+        self.assertIn("527 accepted", out)
+        code, _, _ = self.run_cli("experiments", "--only", "E5", "--output", str(self.folder / "results"))
+        self.assertEqual(code, EXIT_OK)
+
+    def test_rank_still_reports_a_corrupt_booking_file(self):
+        (self.folder / "bookings.json").write_text("{ broken", encoding="utf-8")
+        code, _, err = self.run_cli("rank", "--profile", "budget")
+        self.assertEqual(code, EXIT_ERROR)
+        self.assertIn("is not valid JSON", err)
+
+
 class CompareCommandTests(CliTestCase):
 
     def test_three_profiles_give_three_different_winners(self):
@@ -119,6 +145,14 @@ class BookCommandTests(CliTestCase):
         self.assertEqual(bookings[0]["offer_id"], "OFR-00186")
         self.assertRegex(bookings[0]["reference"], r"^BB-2026-[A-HJ-NP-Z2-9]{6}$")
         self.assertEqual(bookings[0]["payment_status"], "paid (simulated)")
+
+    def test_digit_like_characters_and_signs_are_asked_again(self):
+        # "\u00b2" (superscript two) passes str.isdigit() but is not a number.
+        code, out, _ = self.book("\u00b2", "-1", "1.5", "q")
+        self.assertEqual(code, EXIT_OK)
+        self.assertEqual(out.count("Please enter a number from 1 to 5"), 2)
+        self.assertIn("-1 is not between 1 and 5", out)
+        self.assertEqual(self.read_bookings(), [])
 
     def test_empty_seat_answer_uses_profile_seats(self):
         self.book("1", "", "y", profile="flexible")

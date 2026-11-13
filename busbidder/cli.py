@@ -34,6 +34,17 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 
+def positive_int(text):
+    """argparse type: a whole number of at least 1."""
+    try:
+        number = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{text!r} is not a whole number") from None
+    if number < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, not {number}")
+    return number
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="python3 -m busbidder",
@@ -56,19 +67,19 @@ def build_parser():
     rank = commands.add_parser("rank", help="rank offers for one profile")
     rank.add_argument("--profile", required=True, help="profile name from the profiles file")
     rank.add_argument("--strategy", choices=strategies, default=DEFAULT_STRATEGY)
-    rank.add_argument("--top", type=int, default=10, help="number of offers to show (default: 10)")
+    rank.add_argument("--top", type=positive_int, default=10, help="number of offers to show (default: 10)")
     rank.set_defaults(handler=command_rank)
 
     compare = commands.add_parser("compare", help="compare the winners of several profiles")
     compare.add_argument("--profiles", nargs="+", required=True, metavar="NAME")
     compare.add_argument("--strategy", choices=strategies, default=DEFAULT_STRATEGY)
-    compare.add_argument("--top", type=int, default=3, help="offers shown per profile (default: 3)")
+    compare.add_argument("--top", type=positive_int, default=3, help="offers shown per profile (default: 3)")
     compare.set_defaults(handler=command_compare)
 
     book = commands.add_parser("book", help="rank offers for a profile, then choose one and book it")
     book.add_argument("--profile", required=True, help="profile name from the profiles file")
     book.add_argument("--strategy", choices=strategies, default=DEFAULT_STRATEGY)
-    book.add_argument("--top", type=int, default=5, help="offers to choose from (default: 5)")
+    book.add_argument("--top", type=positive_int, default=5, help="offers to choose from (default: 5)")
     book.set_defaults(handler=command_book)
 
     validate = commands.add_parser("validate", help="check an offer file and list every problem")
@@ -89,7 +100,7 @@ def build_parser():
 class Context:
     """Everything a command needs, loaded once."""
 
-    def __init__(self, args, need_profiles=True):
+    def __init__(self, args, need_profiles=True, need_bookings=True):
         offers_path = args.offers or args.data_dir / "offers.csv"
         self.companies = load_companies(args.data_dir / "companies.csv")
         self.destinations = load_destinations(args.data_dir / "destinations.csv")
@@ -97,7 +108,9 @@ class Context:
         self.offers = self.load_result.offers
         self.profiles_path = args.profiles_file
         self.profiles = load_profiles(args.profiles_file) if need_profiles else {}
-        self.store = BookingStore(args.bookings)
+        # validate and experiments do not use bookings, so they must not
+        # depend on the booking file being readable.
+        self.store = BookingStore(args.bookings) if need_bookings else None
 
     def profile(self, name):
         try:
@@ -174,10 +187,11 @@ def ask_number(prompt, low, high, input_func, default=None):
             raise Cancelled
         if answer == "" and default is not None:
             return default
-        if not answer.isdigit():
+        try:
+            number = int(answer)
+        except ValueError:
             print(f"Please enter a number from {low} to {high}, or q to cancel.")
             continue
-        number = int(answer)
         if not low <= number <= high:
             print(f"{number} is not between {low} and {high}. Please try again.")
             continue
@@ -246,13 +260,13 @@ def command_book(args, input_func=None):
 
 
 def command_validate(args):
-    context = Context(args, need_profiles=False)
+    context = Context(args, need_profiles=False, need_bookings=False)
     print(format_load_result(context.load_result))
     return EXIT_OK
 
 
 def command_experiments(args):
-    context = Context(args)
+    context = Context(args, need_bookings=False)
     data = ExperimentData(
         context.companies, context.destinations, context.offers, context.profiles, args.data_dir
     )
