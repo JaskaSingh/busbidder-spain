@@ -22,7 +22,12 @@ TIME_FORMAT = "%H:%M"
 
 def require_text(field, text):
     """Return the text without surrounding spaces, or raise if it is empty."""
-    if text is None or text.strip() == "":
+    if text is None:
+        raise InvalidValueError(field, text, "is missing")
+    if not isinstance(text, str):
+        # CSV fields are always text, but JSON values can be numbers or lists.
+        raise InvalidValueError(field, text, "must be text")
+    if text.strip() == "":
         raise InvalidValueError(field, text, "is missing")
     return text.strip()
 

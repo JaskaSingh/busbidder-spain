@@ -125,6 +125,10 @@ def load_profiles(path):
         raise DataFileError(path, "file not found") from None
     except json.JSONDecodeError as error:
         raise ConfigError(path, f"is not valid JSON (line {error.lineno}: {error.msg})") from None
+    except UnicodeDecodeError:
+        raise ConfigError(path, "is not a UTF-8 text file") from None
+    except OSError as error:
+        raise DataFileError(path, f"could not be read ({error})") from None
 
     if not isinstance(data, dict) or not data:
         raise ConfigError(path, "must contain at least one named profile")

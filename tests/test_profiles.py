@@ -107,6 +107,33 @@ class ProfileFileTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             load_profiles(self.write_profile(min_change_level="sometimes"))
 
+    def test_wrong_value_types_give_config_error_not_a_crash(self):
+        cases = {
+            "label": 5,
+            "destination_id": 5,
+            "earliest_date": 20260712,
+            "preferred_departure_from": 7,
+            "min_change_level": ["fee"],
+            "max_price_eur": "50",
+            "weights": "price",
+        }
+        for key, bad in cases.items():
+            with self.subTest(key=key):
+                with self.assertRaises(ConfigError) as context:
+                    load_profiles(self.write_profile(**{key: bad}))
+                self.assertIn("profile 'test'", context.exception.reason)
+
+    def test_file_that_is_not_utf8_gives_config_error(self):
+        path = self.folder / "binary.json"
+        path.write_bytes(b"\xff\xfe\x00not text")
+        with self.assertRaises(ConfigError) as context:
+            load_profiles(path)
+        self.assertIn("UTF-8", context.exception.reason)
+
+    def test_folder_instead_of_file_gives_file_error(self):
+        with self.assertRaises(DataFileError):
+            load_profiles(self.folder)
+
     def test_dates_in_wrong_order_are_rejected(self):
         with self.assertRaises(ConfigError):
             load_profiles(self.write_profile(earliest_date="2026-07-14", latest_date="2026-07-12"))
