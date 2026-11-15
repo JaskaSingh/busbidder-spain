@@ -68,6 +68,21 @@ class ReferenceDataTests(TempFileTestCase):
         self.assertIn("line 3", context.exception.reason)
         self.assertIn("distance_km", context.exception.reason)
 
+    def test_reference_row_with_extra_or_missing_field_is_reported(self):
+        for row in ("SOL,SolRuta,Cheap,EXTRA", "SOL,SolRuta"):
+            path = self.write("c.csv", f"company_id,name,profile\n{row}\n")
+            with self.subTest(row=row):
+                with self.assertRaises(DataFileError) as context:
+                    load_companies(path)
+                self.assertIn("line 2", context.exception.reason)
+                self.assertIn("wrong number of fields", context.exception.reason)
+
+    def test_repeated_column_name_is_reported(self):
+        path = self.write("c.csv", "company_id,name,profile,name\nSOL,SolRuta,Cheap,Other\n")
+        with self.assertRaises(DataFileError) as context:
+            load_companies(path)
+        self.assertIn("used more than once: name", context.exception.reason)
+
     def test_duplicate_id_is_reported(self):
         path = self.write(
             "c.csv",

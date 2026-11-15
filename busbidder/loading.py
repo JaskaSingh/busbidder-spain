@@ -101,6 +101,10 @@ def read_rows(path, required_columns):
             reader = csv.DictReader(file)
             if reader.fieldnames is None:
                 raise DataFileError(path, "file is empty")
+            repeated = sorted({name for name in reader.fieldnames if reader.fieldnames.count(name) > 1})
+            if repeated:
+                # DictReader would keep only the last value of a repeated column.
+                raise DataFileError(path, f"column name(s) used more than once: {', '.join(repeated)}")
             missing = [column for column in required_columns if column not in reader.fieldnames]
             if missing:
                 raise DataFileError(path, f"missing column(s): {', '.join(missing)}")
@@ -113,6 +117,15 @@ def read_rows(path, required_columns):
         raise DataFileError(path, f"is not valid CSV ({error})") from None
 
 
+def has_wrong_length(row):
+    """True if a row has fewer or more fields than the header.
+
+    csv.DictReader fills missing fields with None and puts extra fields
+    under the key None.
+    """
+    return None in row or any(value is None for value in row.values())
+
+
 def _load_reference(path, columns, id_field, build):
     """Load a reference file into a dictionary keyed by ID.
 
@@ -121,6 +134,8 @@ def _load_reference(path, columns, id_field, build):
     items = {}
     for line, row in read_rows(path, columns):
         try:
+            if has_wrong_length(row):
+                raise InvalidValueError("row", None, "has the wrong number of fields")
             item_id = clean_code(id_field, row[id_field])
             if item_id in items:
                 raise InvalidValueError(id_field, item_id, "appears more than once")
@@ -203,9 +218,7 @@ def load_offers(path, companies, destinations):
 
 def _build_offer(row, companies, destinations, seen_ids):
     """Turn one CSV row into an Offer or raise InvalidValueError."""
-    # csv.DictReader fills missing fields with None and puts extra fields
-    # under the key None, so both mean the row has the wrong length.
-    if None in row or any(value is None for value in row.values()):
+    if has_wrong_length(row):
         raise InvalidValueError("row", None, "has the wrong number of fields")
 
     offer_id = validate_identifier("offer_id", row["offer_id"], OFFER_ID_PATTERN)
