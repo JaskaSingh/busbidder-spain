@@ -158,9 +158,78 @@ def profile_variant(profile, **changes):
     return variant
 
 
+FINE_RANGE = 10  # percentage points checked either side of a profile's own price weight
+
+
+def fine_weight_check(data, output_dir):
+    """Price weight in steps of 1 around each profile's own value.
+
+    The coarse sweep only samples every tenth percentage point, so it cannot
+    show exactly where a winner changes. This check does, but only for this
+    one kind of change: the price weight moves and the other weights keep
+    their proportions. It says nothing about other ways of changing weights.
+    """
+    header = ["profile", "price_weight", "is_own_weight", "weights", "winner", "company",
+              "total", "lead_over_second"]
+    rows = []
+    lines = [
+        f"E2 fine check: price weight in steps of 1, {FINE_RANGE} points either side of each "
+        "profile's own weight",
+        "",
+    ]
+    for profile in data.profiles.values():
+        own = profile.weights["price"]
+        winners = {}
+        for price_weight in range(max(0, own - FINE_RANGE), min(100, own + FINE_RANGE) + 1):
+            if price_weight == own:
+                weights = dict(profile.weights)
+            else:
+                weights = validate_weights(with_price_weight(profile.weights, price_weight))
+            _, ranking = data.rank(profile_variant(profile, weights=weights))
+            if not ranking:
+                continue
+            top = ranking[0]
+            lead = top.total - ranking[1].total if len(ranking) > 1 else None
+            winners[price_weight] = (top.offer.offer_id, lead)
+            rows.append([
+                profile.name, price_weight, price_weight == own,
+                " ".join(f"{name}={weight}" for name, weight in weights.items()),
+                top.offer.offer_id, top.offer.company.name, f"{top.total:.1f}",
+                "" if lead is None else f"{lead:.1f}",
+            ])
+        own_winner, own_lead = winners[own]
+        low = high = own
+        while low - 1 in winners and winners[low - 1][0] == own_winner:
+            low -= 1
+        while high + 1 in winners and winners[high + 1][0] == own_winner:
+            high += 1
+        checked_low, checked_high = min(winners), max(winners)
+        lines.append(
+            f"{profile.name}: own price weight {own}%, winner {own_winner}, "
+            f"lead {own_lead:.1f} points"
+        )
+        lines.append(f"  same winner from {low}% to {high}% (checked {checked_low}% to {checked_high}%)")
+        for edge, step in ((low, -1), (high, 1)):
+            neighbour = edge + step
+            if neighbour in winners:
+                lines.append(f"  at {neighbour}% the winner is {winners[neighbour][0]}")
+            else:
+                lines.append(f"  no change found down to {edge}%" if step < 0
+                             else f"  no change found up to {edge}%")
+        smallest = min(lead for offer_id, lead in winners.values() if lead is not None)
+        lines.append(f"  smallest lead in the checked range: {smallest:.1f} points")
+        lines.append("")
+    write_csv(output_dir / "e2_weight_sensitivity_fine.csv", header, rows)
+    write_text(output_dir / "e2_weight_sensitivity_fine.txt", lines)
+    return lines
+
+
 @experiment("E2")
 def weight_sensitivity(data, output_dir):
-    """Price weight from 0 to 100% in steps of 10, other weights in proportion."""
+    """Price weight from 0 to 100% in steps of 10, other weights in proportion.
+
+    Followed by a fine check in steps of 1 around each profile's own weight.
+    """
     header = ["profile", "price_weight", "weights", "winner", "company", "fare_type",
               "price_eur", "total", "lead_over_second"]
     rows, lines = [], ["E2 Weight sensitivity: price weight 0 to 100%, anchored scores", ""]
@@ -195,7 +264,7 @@ def weight_sensitivity(data, output_dir):
         lines.append("")
     write_csv(output_dir / "e2_weight_sensitivity.csv", header, rows)
     write_text(output_dir / "e2_weight_sensitivity.txt", lines)
-    return lines
+    return lines + fine_weight_check(data, output_dir)
 
 
 @experiment("E4")

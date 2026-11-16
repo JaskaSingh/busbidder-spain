@@ -13,7 +13,9 @@ from busbidder.logging_setup import close_logging
 ROOT = Path(__file__).resolve().parent.parent
 
 
-class ExperimentCommandTests(unittest.TestCase):
+class ExperimentTestCase(unittest.TestCase):
+    """Shared setup. Holds no tests, so subclasses do not run tests twice."""
+
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -41,6 +43,9 @@ class ExperimentCommandTests(unittest.TestCase):
     def read_csv(self, name):
         with open(self.output / name, newline="", encoding="utf-8") as file:
             return list(csv.DictReader(file))
+
+
+class ExperimentCommandTests(ExperimentTestCase):
 
     def test_experiments_are_registered(self):
         self.assertIn("E1", EXPERIMENTS.names())
@@ -118,7 +123,7 @@ class HelperTests(unittest.TestCase):
         self.assertEqual((profile.max_price_eur, variant.max_price_eur), (50, 60))
 
 
-class SensitivityAndCliffTests(ExperimentCommandTests):
+class SensitivityAndCliffTests(ExperimentTestCase):
 
     def test_e2_marks_each_profile_own_weight(self):
         out = self.run_experiments("--only", "E2")
@@ -128,6 +133,21 @@ class SensitivityAndCliffTests(ExperimentCommandTests):
         own = next(r for r in rows if r["profile"] == "business" and r["price_weight"] == "10")
         self.assertEqual(own["winner"], "OFR-00186")
 
+    def test_e2_fine_check_covers_every_point_around_each_own_weight(self):
+        out = self.run_experiments("--only", "E2")
+        rows = self.read_csv("e2_weight_sensitivity_fine.csv")
+        flexible = {int(r["price_weight"]): r for r in rows if r["profile"] == "flexible"}
+        self.assertEqual(sorted(flexible), list(range(15, 36)))
+        self.assertEqual(flexible[25]["is_own_weight"], "True")
+        self.assertEqual(flexible[25]["weights"], "price=25 duration=15 departure_time=10 flexibility=50")
+        business = [int(r["price_weight"]) for r in rows if r["profile"] == "business"]
+        self.assertEqual((min(business), max(business)), (0, 20))
+        for r in rows:
+            total = sum(int(part.split("=")[1]) for part in r["weights"].split())
+            self.assertEqual(total, 100)
+        self.assertIn("flexible: own price weight 25%, winner OFR-00398", out)
+        self.assertIn("same winner from 15% to 35%", out)
+
     def test_e4_cliff_edge_removes_exactly_one_offer(self):
         self.run_experiments("--only", "E4")
         edge = [r for r in self.read_csv("e4_budget_cliff.csv") if r["part"] == "edge"]
@@ -135,7 +155,7 @@ class SensitivityAndCliffTests(ExperimentCommandTests):
         self.assertEqual([r["edge_offer_kept"] for r in edge], ["False", "True", "True"])
 
 
-class ReversalAndBookingTests(ExperimentCommandTests):
+class ReversalAndBookingTests(ExperimentTestCase):
 
     def test_e3_anchored_never_reverses_minmax_does(self):
         self.run_experiments("--only", "E3")

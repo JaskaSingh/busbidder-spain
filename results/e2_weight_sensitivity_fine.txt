@@ -1,0 +1,20 @@
+E2 fine check: price weight in steps of 1, 10 points either side of each profile's own weight
+
+budget: own price weight 60%, winner OFR-00322, lead 1.9 points
+  same winner from 50% to 70% (checked 50% to 70%)
+  no change found down to 50%
+  no change found up to 70%
+  smallest lead in the checked range: 0.5 points
+
+business: own price weight 10%, winner OFR-00186, lead 8.5 points
+  same winner from 0% to 20% (checked 0% to 20%)
+  no change found down to 0%
+  no change found up to 20%
+  smallest lead in the checked range: 5.1 points
+
+flexible: own price weight 25%, winner OFR-00398, lead 6.1 points
+  same winner from 15% to 35% (checked 15% to 35%)
+  no change found down to 15%
+  no change found up to 35%
+  smallest lead in the checked range: 1.6 points
+

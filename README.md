@@ -85,7 +85,7 @@ Run one test file with, for example:
 
     python3 -m unittest tests.test_integration -v
 
-The suite has 200 tests in `tests/`, covering normal use, invalid input,
+The suite has 210 tests in `tests/`, covering normal use, invalid input,
 missing data, boundary cases and a full pipeline test on the small dataset
 in `tests/fixtures/pipeline/`. Tests write only to temporary folders.
 
