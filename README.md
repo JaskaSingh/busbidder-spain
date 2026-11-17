@@ -71,7 +71,9 @@ seed. To regenerate it (the result is identical every time):
 | `logs/busbidder.log` | Loads, rejected and reviewed rows, corrections, bookings and errors | no |
 
 The offer files are never changed by the program. Seats left on an offer are
-its original seats minus the seats booked in `state/bookings.json`. To start
+its original seats minus the seats booked in `state/bookings.json`. Seats are
+counted per offer, so two fare types on the same departure (for example
+SolRuta basic and plus) do not share one seat count. To start
 again with no bookings, delete the `state` folder. The experiments never use
 the real booking file, so existing bookings do not change the results.
 

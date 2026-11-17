@@ -1,7 +1,9 @@
 """Domain objects for BusBidder Spain.
 
-Each class checks its own values in __init__, so an object can never exist
-in an invalid state. Numeric ranges use the Bounded descriptor. The loader
+Each class checks its values in __init__, so an object starts out valid.
+Numeric attributes use the Bounded descriptor, which also checks every later
+assignment to them. Other attributes are only checked when the object is
+created. The loader
 builds these objects from text and records any InvalidValueError as a
 rejected row.
 """

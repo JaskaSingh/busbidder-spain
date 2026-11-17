@@ -181,7 +181,11 @@ class BookingStore:
         return generate_reference(self.rng, year, self.references())
 
     def seats_left(self, offer):
-        """Original seats on the offer minus seats already booked on it."""
+        """Original seats on the offer minus seats already booked on it.
+
+        Seats are counted per offer. Two fare types on the same departure
+        are separate offers, so they do not share one seat count.
+        """
         return offer.available_seats - self.seats_booked(offer.offer_id)
 
     def book(self, offer, seats, profile_name, booked_at=None):

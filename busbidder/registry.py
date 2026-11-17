@@ -1,6 +1,6 @@
 """A small reusable registry of named functions.
 
-Used for scoring criteria and for normalisation strategies. Each registry
+Used for scoring criteria, normalisation strategies and experiments. Each registry
 gives a decorator that stores a function under a name, a lookup that gives a
 clear error for unknown names, and a sorted list of what is available.
 """

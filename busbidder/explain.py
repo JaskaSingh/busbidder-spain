@@ -8,8 +8,8 @@ accepted offers and weighs the difference by the traveller's weight.
   over the alternatives and also scores at least 50 on its own.
 - Disadvantages: criteria where it is worse than the alternatives, and
   criteria where it scores under 50 even if the others are worse still.
-  At most two are shown, and at least one is always named, so remaining
-  drawbacks are never hidden.
+  At most two are shown, and at least one is always named, so the
+  explanation never presents an offer as having no drawbacks.
 
 Wording always says "ranked first under your preferences", never "best",
 because the result depends on the chosen constraints, weights and data.

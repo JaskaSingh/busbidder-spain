@@ -37,7 +37,7 @@ def configure_logging(log_dir=DEFAULT_LOG_DIR, level=logging.INFO):
 
 
 def close_logging():
-    """Remove and close file handlers. Used by tests and at program exit."""
+    """Remove and close file handlers. Used by tests."""
     logger = logging.getLogger("busbidder")
     for handler in list(logger.handlers):
         if isinstance(handler, logging.FileHandler):

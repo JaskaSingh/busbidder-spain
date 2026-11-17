@@ -9,8 +9,8 @@ company and destination it fixes a route (transfers, normal price, normal
 driving time), runs that route on four to six days of the travel week and
 writes one offer per fare type for each departure. Prices, durations and
 fare conditions follow each company's profile. The result goes to
-data/offers.csv. A fixed seed makes the output
-identical on every run, so the dataset can be reproduced from the script.
+data/offers.csv. A fixed seed makes the output identical on every run, so
+the dataset can be reproduced from the script.
 """
 
 import csv
